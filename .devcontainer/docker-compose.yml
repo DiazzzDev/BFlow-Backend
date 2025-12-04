@@ -1,11 +1,8 @@
 version: '3.8'
 
-volumes:
-  postgres-data:
-
 services:
   app:
-    container_name: javadev
+    container_name: bflow
     build: 
       context: .
       dockerfile: Dockerfile
@@ -14,23 +11,24 @@ services:
         POSTGRES_PASSWORD: postgres
         POSTGRES_USER: postgres
         POSTGRES_DB: postgres
-        POSTGRES_HOSTNAME: postgresdb
 
     volumes:
       - ../..:/workspaces:cached
       
-    # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 
-    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
-    network_mode: service:db
-
-    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally. 
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    networks:
+      - asset-network
 
   db:
     container_name: postgresdb
-    image: postgres:latest
+    image: postgres:16
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -39,6 +37,29 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
+    networks:
+      - asset-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      retries: 5
 
-    # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward PostgreSQL locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - asset-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      retries: 5
+
+networks:
+  asset-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
