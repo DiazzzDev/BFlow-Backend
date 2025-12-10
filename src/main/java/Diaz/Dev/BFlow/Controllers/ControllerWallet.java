@@ -12,8 +12,10 @@ public class ControllerWallet {
     @Autowired
     private ServiceWallet objServiceW;
 
+    //Endpoint for testing connection with database
     @GetMapping
     public String connection(){
         return "Hello postgresql";
     }
+
 }
