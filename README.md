@@ -38,3 +38,8 @@ Try this first:
 - Wait again and see if the containers are running on Docker Desktop
 
 If that didnt work usually is because Docker sometimes requires you to restart your machine and try the steps I wrote before.
+
+I changed my .env variables and they doesn't work
+- You can run "echo $ENV_VAR" (Example: "echo $DB_URL") to display how the container reads the variable.
+- If there is an older value press F1 or CTRL + SHIFT + P and run "Dev Containers: Rebuild Container"
+- Run "echo $ENV_VAR" again before run the app and now you can see if it reads the value you changed
