@@ -1,4 +1,4 @@
-package Diaz.Dev.BFlow;
+package Bflow;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
