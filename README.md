@@ -1,6 +1,7 @@
 # BFlow - API
 
-Hello!
+Hello and welcome to BFlow!!
+BFlow (Budget Flow) is an open-source expense & budget tracking backend built with Spring Boot, PostgreSQL (Supabase for deploy) and Redis, designed with clean domain-driven structure and real-world business rules. Its a personal tool to help you out to manage your expenses.
 
 ## SETUP
 
@@ -39,7 +40,7 @@ Try this first:
 
 If that didnt work usually is because Docker sometimes requires you to restart your machine and try the steps I wrote before.
 
-I changed my .env variables and they doesn't work
+### I changed my .env variables and they doesn't work
 - You can run "echo $ENV_VAR" (Example: "echo $DB_URL") to display how the container reads the variable.
 - If there is an older value press F1 or CTRL + SHIFT + P and run "Dev Containers: Rebuild Container"
 - Run "echo $ENV_VAR" again before run the app and now you can see if it reads the value you changed
