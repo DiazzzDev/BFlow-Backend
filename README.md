@@ -3,17 +3,19 @@
 Hello and welcome to BFlow!!
 BFlow (Budget Flow) is an open-source expense & budget tracking backend built with Spring Boot, PostgreSQL (Supabase for deploy) and Redis, designed with clean domain-driven structure and real-world business rules. Its a personal tool to help you out to manage your expenses.
 
+## REQUIREMENTS
+
+- Docker Desktop (you can install it from [Docker](https://www.docker.com/products/docker-desktop/))
+- VSCode
+- Dev Containers extension [here](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
 ## SETUP
 
-- Install Docker Desktop, you can install it from [Docker](https://www.docker.com/products/docker-desktop/)
+- Open Docker Desktop during the process, this is important.
 
-- Once installed open Docker Desktop, open the app during the process, this is important.
+- Open VSCode and open the project folder
 
-- Open VSCode and install Dev Containers extension [here](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-
-- Open the folder where this project is
-
-- A notification will appear
+- A notification will appear on the corner
 
 - Click on the "Reopen in Container" option, then wait until everything is setup. (Around 7-10 min in the first time)
 
