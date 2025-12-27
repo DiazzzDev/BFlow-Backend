@@ -11,19 +11,16 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(crsf -> crsf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            ).authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/register",
-                    "/api/auth/login"
-                ).permitAll()
+            .csrf(csrf -> csrf.disable())
+            .httpBasic(basic -> basic.disable())
+            .formLogin(form -> form.disable())
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             );
-
         return http.build();
     }
 }

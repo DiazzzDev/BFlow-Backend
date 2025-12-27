@@ -43,7 +43,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String register(@Valid AuthRegisterRequest dto) {
+    public void register(@Valid AuthRegisterRequest dto) {
         boolean exists = authAccountRepository
                 .existsByProviderAndProviderUserId(
                         AuthProvider.LOCAL,
@@ -69,7 +69,5 @@ public class AuthService {
         account.setEnabled(true);
 
         authAccountRepository.save(account);
-
-        return account.getPasswordHash();
     }
 }
