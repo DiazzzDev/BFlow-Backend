@@ -1,4 +1,4 @@
-package Bflow.Wallet;
+package Bflow.wallet;
 
 public class DTOResponse {
     
