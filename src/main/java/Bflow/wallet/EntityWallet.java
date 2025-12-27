@@ -13,6 +13,15 @@ import lombok.ToString;
 @Table(name = "TBWALLET")
 @Getter @Setter @ToString @EqualsAndHashCode
 public class EntityWallet {
-    @Id @Column(name = "idWallet")
+    @Id @Column(name = "IDWALLET")
     private Long idWallet;
+
+    @Column(name = "NAME", nullable = false)
+    private String name;
+
+    @Column(name = "VALUE", nullable = false)
+    private Double value;
+
+    @Column(name = "INITIALVALUE")
+    private Double initialValue;
 }
