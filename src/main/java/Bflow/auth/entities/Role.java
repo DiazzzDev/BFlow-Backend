@@ -1,4 +1,4 @@
-package Bflow.auth.entity;
+package Bflow.auth.entities;
 
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;

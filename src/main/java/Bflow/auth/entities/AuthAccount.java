@@ -1,4 +1,4 @@
-package Bflow.auth.entity;
+package Bflow.auth.entities;
 
 import Bflow.auth.enums.AuthProvider;
 import jakarta.persistence.*;
