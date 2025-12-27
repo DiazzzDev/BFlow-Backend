@@ -1,4 +1,4 @@
-package Bflow.Wallet;
+package Bflow.wallet;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
