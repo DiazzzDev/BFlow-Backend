@@ -20,6 +20,19 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String errorMsg = ex.getBindingResult().getFieldErrors().stream()
