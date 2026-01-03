@@ -1,6 +1,7 @@
 package Bflow.auth.controllers;
 
 import Bflow.auth.DTO.AuthLoginRequest;
+import Bflow.auth.DTO.AuthLoginResponse;
 import Bflow.auth.DTO.AuthRegisterRequest;
 import Bflow.auth.services.AuthService;
 import Bflow.common.response.ApiResponse;
@@ -22,15 +23,13 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Void>> login(@Valid @RequestBody AuthLoginRequest request, HttpServletRequest httpRequest){
-        authService.login(request);
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Login successful",
-                        null,
-                        httpRequest.getRequestURI()
-                )
-        );
+    public ResponseEntity<ApiResponse<AuthLoginResponse>> login(@Valid @RequestBody AuthLoginRequest request, HttpServletRequest httpRequest){
+        AuthLoginResponse response = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Login successful",
+                response,
+                httpRequest.getRequestURI()
+        ));
     }
 
     @PostMapping("/register")

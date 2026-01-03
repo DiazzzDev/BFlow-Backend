@@ -25,7 +25,6 @@ public interface RepositoryAuthAccount extends JpaRepository<AuthAccount, UUID> 
             @Param("provider") AuthProvider provider
     );
 
-
     boolean existsByProviderAndProviderUserId(
             AuthProvider provider,
             String providerUserId
