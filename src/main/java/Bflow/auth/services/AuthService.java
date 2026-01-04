@@ -1,7 +1,5 @@
 package Bflow.auth.services;
 
-import Bflow.auth.DTO.AuthLoginRequest;
-import Bflow.auth.DTO.AuthLoginResponse;
 import Bflow.auth.DTO.AuthRegisterRequest;
 import Bflow.auth.entities.AuthAccount;
 import Bflow.auth.entities.User;
@@ -16,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,33 +26,22 @@ public class AuthService {
     private final JwtService jwtService;
     private final RepositoryUserRole repositoryUserRole;
 
-    public AuthLoginResponse login(@Valid AuthLoginRequest credentials) {
-        AuthAccount account = authAccountRepository.findActiveByLoginAndProvider(
-                        credentials.getEmail(),
-                        AuthProvider.LOCAL
-                ).orElseThrow(InvalidCredentialsException::new);
+    public User authenticate(String email, String password) {
 
-        if (account.getPasswordHash() == null)
+        AuthAccount account = authAccountRepository
+                .findActiveByLoginAndProvider(email, AuthProvider.LOCAL)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (account.getPasswordHash() == null ||
+                !passwordEncoder.matches(password, account.getPasswordHash())) {
             throw new InvalidCredentialsException();
+        }
 
-        boolean matches = passwordEncoder.matches(
-                credentials.getPassword(),
-                account.getPasswordHash()
-        );
+        return account.getUser();
+    }
 
-        if (!matches)
-            throw new InvalidCredentialsException();
-
-        User user = account.getUser();
-        List<String> roles = repositoryUserRole.findRoleCodesByUserId(user.getId());
-
-
-        String token = jwtService.generateToken(
-                user.getId(),
-                roles
-        );
-
-        return new AuthLoginResponse(token, "Bearer", jwtService.getAccessTokenTtlSeconds());
+    public List<String> getRoles(User user) {
+        return repositoryUserRole.findRoleCodesByUserId(user.getId());
     }
 
     public void register(@Valid AuthRegisterRequest dto) {
@@ -80,5 +69,14 @@ public class AuthService {
         account.setEnabled(true);
 
         authAccountRepository.save(account);
+    }
+
+    public User findById(UUID userId) {
+        Optional<User> byId = userRepository.findById(userId);
+        if (byId.isPresent()) {
+            return byId.get();
+        }else{
+            throw new IllegalStateException("User not found");
+        }
     }
 }
