@@ -55,23 +55,14 @@ public class JwtServiceImpl implements JwtService {
         try {
             SignedJWT jwt = SignedJWT.parse(token);
 
-            System.out.println("JWT kid: " + jwt.getHeader().getKeyID());
-            System.out.println("JWT alg: " + jwt.getHeader().getAlgorithm());
+            String kid = jwt.getHeader().getKeyID();
+            RSAPublicKey key = rsaKeyProvider.getPublicKey(kid);
 
-            RSAPublicKey key = rsaKeyProvider.getPublicKey(jwt.getHeader().getKeyID());
-
-            System.out.println("Public key modulus: " + key.getModulus());
-
-            boolean verified = jwt.verify(new RSASSAVerifier(key));
-            System.out.println("Signature verified: " + verified);
-
-            return verified &&
-                    jwt.getJWTClaimsSet()
-                            .getExpirationTime()
-                            .after(new Date());
-
+            return jwt.verify(new RSASSAVerifier(key))
+                    && jwt.getJWTClaimsSet()
+                    .getExpirationTime()
+                    .after(new Date());
         } catch (Exception e) {
-            e.printStackTrace();
             return false;
         }
     }
