@@ -24,11 +24,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(csrf -> csrf.disable()) // cookies + JWT = CSRF controlado por SameSite
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/auth/**"))
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json");
+                            res.getWriter().write("""
+                        {
+                          "error": "unauthorized",
+                          "message": "Authentication required"
+                        }
+                    """);
+                        })
+                )
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers( "/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
+                    .requestMatchers("/oauth2/**").permitAll()
                     .anyRequest().authenticated()
                 ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

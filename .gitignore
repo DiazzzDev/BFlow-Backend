@@ -26,6 +26,7 @@ target/
 # Ignore private pem
 BFlow-Backend/src/main/resources/keys/private.pem
 **/src/main/**/keys/private.pem
+src/main/resources/keys/private.pem
 
 ### NetBeans ###
 /nbproject/private/

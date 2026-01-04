@@ -19,15 +19,16 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
-    private final PrivateKey privateKey;
-    private final RSAPublicKey publicKey;
+    private final RsaKeyProvider rsaKeyProvider;
 
     private static final long ACCESS_TOKEN_TTL_SECONDS = 3600;
 
     @Override
     public String generateToken(UUID userId, String email, List<String> roles) {
         try {
-            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+            RsaKeyPair keys = rsaKeyProvider.getActive();
+
+            JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(userId.toString())
                     .claim("roles", roles)
                     .claim("email", email)
@@ -36,12 +37,12 @@ public class JwtServiceImpl implements JwtService {
                     .issuer("bflow-api")
                     .build();
 
-            SignedJWT jwt = new SignedJWT(
-                    new JWSHeader(JWSAlgorithm.RS256),
-                    claimsSet
-            );
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+                    .keyID(keys.kid())
+                    .build();
 
-            jwt.sign(new RSASSASigner(privateKey));
+            SignedJWT jwt = new SignedJWT(header, claims);
+            jwt.sign(new RSASSASigner(keys.privateKey()));
 
             return jwt.serialize();
         }catch (Exception e){
@@ -53,9 +54,24 @@ public class JwtServiceImpl implements JwtService {
     public boolean validateToken(String token) {
         try {
             SignedJWT jwt = SignedJWT.parse(token);
-            return jwt.verify(new RSASSAVerifier(publicKey))
-                    && jwt.getJWTClaimsSet().getExpirationTime().after(new Date());
+
+            System.out.println("JWT kid: " + jwt.getHeader().getKeyID());
+            System.out.println("JWT alg: " + jwt.getHeader().getAlgorithm());
+
+            RSAPublicKey key = rsaKeyProvider.getPublicKey(jwt.getHeader().getKeyID());
+
+            System.out.println("Public key modulus: " + key.getModulus());
+
+            boolean verified = jwt.verify(new RSASSAVerifier(key));
+            System.out.println("Signature verified: " + verified);
+
+            return verified &&
+                    jwt.getJWTClaimsSet()
+                            .getExpirationTime()
+                            .after(new Date());
+
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
