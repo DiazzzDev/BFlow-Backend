@@ -52,4 +52,15 @@ public class RsaKeyProvider {
             throw new IllegalStateException(e);
         }
     }
+
+    public Map<String, RSAPublicKey> getAllPublicKeys() {
+        Map<String, RSAPublicKey> publicKeys = new HashMap<>();
+
+        for (Map.Entry<String, RsaKeyPair> entry : keys.entrySet()) {
+            publicKeys.put(entry.getKey(), entry.getValue().publicKey());
+        }
+
+        return publicKeys;
+    }
+
 }
