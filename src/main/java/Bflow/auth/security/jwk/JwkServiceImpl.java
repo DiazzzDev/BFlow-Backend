@@ -1,11 +1,13 @@
 package Bflow.auth.security.jwk;
 
-import Bflow.auth.security.jwt.RsaKeyPair;
 import Bflow.auth.security.jwt.RsaKeyProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import java.security.interfaces.RSAPublicKey;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -14,11 +16,31 @@ public class JwkServiceImpl implements JwkService {
     private final RsaKeyProvider rsaKeyProvider;
 
     @Override
-    public List<Jwk> getPublicKeys() {
-        return rsaKeyProvider.getAllPublicKeys()
-                .entrySet()
+    public Map<String, Object> getJwks() {
+
+        List<Map<String, Object>> keys = rsaKeyProvider
+                .getAll()
+                .values()
                 .stream()
-                .map(e -> JwkMapper.from(e.getValue(), e.getKey()))
+                .map(k -> {
+                    RSAPublicKey pub = k.publicKey();
+
+                    Map<String, Object> jwk = new HashMap<>();
+                    jwk.put("kty", "RSA");
+                    jwk.put("kid", k.kid());
+                    jwk.put("alg", "RS256");
+                    jwk.put("use", "sig");
+                    jwk.put("n", Base64.getUrlEncoder()
+                            .withoutPadding()
+                            .encodeToString(pub.getModulus().toByteArray()));
+                    jwk.put("e", Base64.getUrlEncoder()
+                            .withoutPadding()
+                            .encodeToString(pub.getPublicExponent().toByteArray()));
+
+                    return jwk;
+                })
                 .toList();
+
+        return Map.of("keys", keys);
     }
 }

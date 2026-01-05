@@ -63,4 +63,7 @@ public class RsaKeyProvider {
         return publicKeys;
     }
 
+    public Map<String, RsaKeyPair> getAll() {
+        return Map.copyOf(keys);
+    }
 }

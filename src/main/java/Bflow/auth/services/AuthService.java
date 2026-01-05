@@ -23,7 +23,6 @@ public class AuthService {
     private final RepositoryAuthAccount authAccountRepository;
     private final RepositoryUser userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final RepositoryUserRole repositoryUserRole;
 
     public User authenticate(String email, String password) {
@@ -56,7 +55,8 @@ public class AuthService {
 
         User user = new User();
         user.setEmail(dto.getEmail());
-        user.setFullName(dto.getFullName());
+        user.setProvider(AuthProvider.LOCAL);
+        user.setEnabled(true);
 
         //We save the new user
         userRepository.save(user);

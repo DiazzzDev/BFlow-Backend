@@ -1,7 +1,7 @@
 package Bflow.auth.security.jwk;
 
-import java.util.List;
+import java.util.Map;
 
 public interface JwkService {
-    List<Jwk> getPublicKeys();
+    Map<String, Object> getJwks();
 }
