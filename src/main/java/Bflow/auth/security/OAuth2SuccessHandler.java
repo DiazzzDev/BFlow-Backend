@@ -1,9 +1,7 @@
 package Bflow.auth.security;
 
-import Bflow.auth.entities.Role;
 import Bflow.auth.entities.User;
 import Bflow.auth.enums.AuthProvider;
-import Bflow.auth.security.jwk.JwkService;
 import Bflow.auth.security.jwt.JwtService;
 import Bflow.auth.services.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,22 +24,30 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication
     ) throws IOException {
-        OAuth2User oAuth2User =  (OAuth2User) authentication.getPrincipal();
+        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String email = oAuth2User.getAttribute("email");
         String providerId = oAuth2User.getAttribute("sub");
-        AuthProvider provider = AuthProvider.GOOGLE;
+
+        if (email == null || providerId == null) {
+            throw new IllegalStateException("Google OAuth user missing required attributes");
+        }
 
         User user = userService.resolveOAuth2User(
                 email,
                 providerId,
-                provider
+                AuthProvider.GOOGLE
         );
+
+        List<String> roles = user.getRoles()
+                .stream()
+                .map(r -> "ROLE_" + r)
+                .toList();
 
         String token = jwtService.generateToken(
                 user.getId(),
                 user.getEmail(),
-                List.of("ROLE_USER")
+                roles
         );
 
         response.sendRedirect(

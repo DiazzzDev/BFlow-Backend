@@ -1,18 +1,19 @@
 package Bflow.auth.entities;
 
 import Bflow.auth.enums.AuthProvider;
-import Bflow.auth.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class User {
 
@@ -33,7 +34,8 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id")
     )
     @Column(name = "role")
-    private Set<String> roles;
+    @Builder.Default
+    private Set<String> roles = Set.of("ROLE_USER");
 
     @Builder.Default
     @Column(nullable = false)

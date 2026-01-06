@@ -26,7 +26,19 @@ public class UserServiceImpl implements UserService {
             AuthProvider provider
     ) {
         return userRepository.findByEmail(email)
+                .map(existingUser -> validateProvider(existingUser, provider))
                 .orElseGet(() -> createOAuth2User(email, providerId, provider));
+    }
+
+    private User validateProvider(User user, AuthProvider provider) {
+
+        if (user.getProvider() != provider) {
+            throw new IllegalStateException(
+                    "User already registered with provider: " + user.getProvider()
+            );
+        }
+
+        return user;
     }
 
     private User createOAuth2User(
@@ -37,6 +49,8 @@ public class UserServiceImpl implements UserService {
         User user = User.builder()
                 .email(email)
                 .enabled(true)
+                .provider(provider)
+                .roles(Set.of("USER"))
                 .build();
 
         userRepository.save(user);

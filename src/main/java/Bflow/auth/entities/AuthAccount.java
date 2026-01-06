@@ -4,10 +4,11 @@ import Bflow.auth.enums.AuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@Table(name = "auth_account")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -33,6 +34,11 @@ public class AuthAccount {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    void onCreate() {
+        this.createdAt = Instant.now();
+    }
 }

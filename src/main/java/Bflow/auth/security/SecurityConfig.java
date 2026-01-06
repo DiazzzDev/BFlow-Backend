@@ -30,7 +30,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setStatus(401);
@@ -45,7 +45,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers( "/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/.well-known/jwks.json").permitAll()
-                    .requestMatchers("/oauth2/**").permitAll()
+                    .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
                     .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 ->
@@ -54,6 +54,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)
                 ))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }

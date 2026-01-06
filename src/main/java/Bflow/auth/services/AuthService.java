@@ -6,24 +6,23 @@ import Bflow.auth.entities.User;
 import Bflow.auth.enums.AuthProvider;
 import Bflow.auth.repository.RepositoryAuthAccount;
 import Bflow.auth.repository.RepositoryUser;
-import Bflow.auth.repository.RepositoryUserRole;
-import Bflow.auth.security.jwt.JwtService;
 import Bflow.common.exception.InvalidCredentialsException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
     private final RepositoryAuthAccount authAccountRepository;
     private final RepositoryUser userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RepositoryUserRole repositoryUserRole;
 
     public User authenticate(String email, String password) {
 
@@ -39,26 +38,31 @@ public class AuthService {
         return account.getUser();
     }
 
+    /**
+     * Los roles ahora viven en User
+     */
     public List<String> getRoles(User user) {
-        return repositoryUserRole.findRoleCodesByUserId(user.getId());
+        return List.copyOf(user.getRoles());
     }
 
     public void register(@Valid AuthRegisterRequest dto) {
+
         boolean exists = authAccountRepository
                 .existsByProviderAndProviderUserId(
                         AuthProvider.LOCAL,
                         dto.getEmail()
                 );
 
-        if (exists)
+        if (exists) {
             throw new IllegalStateException("User already exists");
+        }
 
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setProvider(AuthProvider.LOCAL);
+        user.setRoles(Set.of("USER"));
         user.setEnabled(true);
 
-        //We save the new user
         userRepository.save(user);
 
         AuthAccount account = new AuthAccount();
@@ -72,11 +76,7 @@ public class AuthService {
     }
 
     public User findById(UUID userId) {
-        Optional<User> byId = userRepository.findById(userId);
-        if (byId.isPresent()) {
-            return byId.get();
-        }else{
-            throw new IllegalStateException("User not found");
-        }
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
     }
 }
