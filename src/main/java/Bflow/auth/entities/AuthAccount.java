@@ -2,20 +2,16 @@ package Bflow.auth.entities;
 
 import Bflow.auth.enums.AuthProvider;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "auth_accounts",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"provider", "providerUserId"})
-        }
-)
+@Table(name = "auth_account")
 @Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
 public class AuthAccount {
     @Id @GeneratedValue
     private UUID id;
@@ -34,9 +30,15 @@ public class AuthAccount {
     @Column(length = 255)
     private String passwordHash;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    void onCreate() {
+        this.createdAt = Instant.now();
+    }
 }

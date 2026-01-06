@@ -1,6 +1,5 @@
 package Bflow.auth.services;
 
-import Bflow.auth.DTO.AuthLoginRequest;
 import Bflow.auth.DTO.AuthRegisterRequest;
 import Bflow.auth.entities.AuthAccount;
 import Bflow.auth.entities.User;
@@ -9,41 +8,45 @@ import Bflow.auth.repository.RepositoryAuthAccount;
 import Bflow.auth.repository.RepositoryUser;
 import Bflow.common.exception.InvalidCredentialsException;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthService {
+
     private final RepositoryAuthAccount authAccountRepository;
     private final RepositoryUser userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public void login(@Valid AuthLoginRequest credentials) {
+    public User authenticate(String email, String password) {
 
-        AuthAccount account = (AuthAccount) authAccountRepository.findActiveByLoginAndProvider(
-                        credentials.getEmail(),
-                        AuthProvider.LOCAL
-                ).orElseThrow(InvalidCredentialsException::new);
+        AuthAccount account = authAccountRepository
+                .findActiveByLoginAndProvider(email, AuthProvider.LOCAL)
+                .orElseThrow(InvalidCredentialsException::new);
 
-        if (account.getPasswordHash() == null) {
+        if (account.getPasswordHash() == null ||
+                !passwordEncoder.matches(password, account.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
 
-        boolean matches = passwordEncoder.matches(
-                credentials.getPassword(),
-                account.getPasswordHash()
-        );
-
-        if (!matches) {
-            throw new InvalidCredentialsException();
-        }
+        return account.getUser();
     }
 
-    @Transactional
+    /**
+     * Los roles ahora viven en User
+     */
+    public List<String> getRoles(User user) {
+        return List.copyOf(user.getRoles());
+    }
+
     public void register(@Valid AuthRegisterRequest dto) {
+
         boolean exists = authAccountRepository
                 .existsByProviderAndProviderUserId(
                         AuthProvider.LOCAL,
@@ -56,9 +59,10 @@ public class AuthService {
 
         User user = new User();
         user.setEmail(dto.getEmail());
-        user.setFullName(dto.getFullName());
+        user.setProvider(AuthProvider.LOCAL);
+        user.setRoles(Set.of("USER"));
+        user.setEnabled(true);
 
-        //We save the new user
         userRepository.save(user);
 
         AuthAccount account = new AuthAccount();
@@ -69,5 +73,10 @@ public class AuthService {
         account.setEnabled(true);
 
         authAccountRepository.save(account);
+    }
+
+    public User findById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
     }
 }
