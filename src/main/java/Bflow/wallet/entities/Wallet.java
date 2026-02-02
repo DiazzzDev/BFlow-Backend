@@ -11,6 +11,7 @@ import java.util.UUID;
 @Table(name = "wallets")
 @Getter @Setter @ToString @EqualsAndHashCode
 @AllArgsConstructor
+@NoArgsConstructor
 public class Wallet {
     @Id @GeneratedValue
     @Column(nullable = false, updatable = false)

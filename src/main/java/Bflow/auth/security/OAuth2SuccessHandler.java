@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -44,14 +45,15 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 .map(r -> "ROLE_" + r)
                 .toList();
 
-        String token = jwtService.generateToken(
+        String accessToken = jwtService.generateToken(
                 user.getId(),
                 user.getEmail(),
                 roles
         );
 
-        response.sendRedirect(
-                "http://localhost:8080/login/success?token=" + token
-        );
+        String refreshToken = UUID.randomUUID().toString();
+
+        jwtService.attachAuthCookies(response, accessToken, refreshToken);
+        response.sendRedirect("http://localhost:3000");
     }
 }

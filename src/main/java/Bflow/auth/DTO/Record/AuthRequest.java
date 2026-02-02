@@ -1,4 +1,4 @@
-package Bflow.auth.DTO;
+package Bflow.auth.DTO.Record;
 
 public record AuthRequest(
         String email,

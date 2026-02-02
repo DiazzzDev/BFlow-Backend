@@ -1,9 +1,10 @@
 package Bflow.auth.controllers;
 
 import Bflow.auth.DTO.AuthLoginRequest;
-import Bflow.auth.DTO.AuthLoginResponse;
 import Bflow.auth.DTO.AuthMeResponse;
 import Bflow.auth.DTO.AuthRegisterRequest;
+import Bflow.auth.DTO.Record.RefreshRotationResult;
+import Bflow.auth.DTO.Record.RefreshSession;
 import Bflow.auth.entities.RefreshToken;
 import Bflow.auth.entities.User;
 import Bflow.auth.security.jwt.JwtService;
@@ -13,7 +14,6 @@ import Bflow.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -22,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,7 +55,7 @@ public class AuthController {
                 roles
         );
 
-        // 4. Refresh token (opaque)
+        // 4. Refresh token
         String rawRefreshToken = UUID.randomUUID().toString();
         serviceRefreshToken.create(user.getId(), rawRefreshToken);
 
@@ -120,37 +119,42 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // 1. Validate + revoke old refresh token
-        RefreshToken usedToken = serviceRefreshToken.validateAndRotate(refreshToken);
-        UUID userId = usedToken.getUserId();
+        RefreshRotationResult result = serviceRefreshToken.rotate(refreshToken);
 
-        // 2. Load user context
-        User user = authService.findById(userId);
+        User user = authService.findById(result.userId());
         List<String> roles = authService.getRoles(user);
 
-        // 3. New access token
         String newAccessToken = jwtService.generateToken(
                 user.getId(),
                 user.getEmail(),
                 roles
         );
 
-        // 4. New refresh token
-        String newRefreshToken = UUID.randomUUID().toString();
-        serviceRefreshToken.create(userId, newRefreshToken);
-
-        // 5. Cookies
         setCookie(response, "access_token", newAccessToken, jwtService.getAccessTokenTtlSeconds());
-        setCookie(response, "refresh_token", newRefreshToken, 14 * 24 * 3600);
+        setCookie(response, "refresh_token", result.newRefreshToken(), 14 * 24 * 3600);
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<List<RefreshSession>> sessions(
+            @CookieValue("refresh_token") String rawToken
+    ) {
+        RefreshToken current = serviceRefreshToken.validate(rawToken); // solo validate, NO rotate
+
+        List<RefreshSession> sessions = serviceRefreshToken.listActiveSessions(
+                        current.getUserId(),
+                        current.getId()
+        );
+
+        return ResponseEntity.ok(sessions);
     }
 
     //Cookie util methods
     private void setCookie(HttpServletResponse res, String name, String value, long maxAge) {
         ResponseCookie cookie = ResponseCookie.from(name, value)
-                .httpOnly(false)
-                .secure(false)
+                .httpOnly(true)
+                .secure(true)
                 .path("/")
                 .sameSite("None")
                 .maxAge(maxAge)
@@ -160,8 +164,8 @@ public class AuthController {
 
     private void clearCookie(HttpServletResponse res, String name) {
         ResponseCookie cookie = ResponseCookie.from(name, "")
-                .httpOnly(false)
-                .secure(false)
+                .httpOnly(true)
+                .secure(true)
                 .sameSite("None")
                 .path("/")
                 .maxAge(0)

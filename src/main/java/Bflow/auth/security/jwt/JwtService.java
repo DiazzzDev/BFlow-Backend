@@ -1,5 +1,7 @@
 package Bflow.auth.security.jwt;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -19,4 +21,10 @@ public interface JwtService {
     String extractEmail(String token);
 
     List<String> extractRoles(String token);
+
+    void attachAuthCookies(
+            HttpServletResponse response,
+            String accessToken,
+            String refreshToken
+    );
 }

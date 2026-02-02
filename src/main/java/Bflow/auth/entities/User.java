@@ -3,8 +3,6 @@ package Bflow.auth.entities;
 import Bflow.auth.enums.AuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 

@@ -7,10 +7,13 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
-import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -93,5 +96,30 @@ public class JwtServiceImpl implements JwtService {
         } catch (Exception e) {
             throw new IllegalStateException("Invalid JWT", e);
         }
+    }
+
+    public void attachAuthCookies(
+            HttpServletResponse response,
+            String accessToken,
+            String refreshToken
+    ) {
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
+                .httpOnly(true)
+                .secure(true) // false solo en local
+                .path("/")
+                .sameSite("Strict")
+                .maxAge(Duration.ofHours(1))
+                .build();
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/api/auth/refresh")
+                .sameSite("Strict")
+                .maxAge(Duration.ofDays(14))
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
     }
 }
