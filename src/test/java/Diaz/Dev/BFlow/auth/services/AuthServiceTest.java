@@ -1,13 +1,13 @@
 package Diaz.Dev.BFlow.auth.services;
 
-import Bflow.auth.DTO.AuthRegisterRequest;
-import Bflow.auth.entities.AuthAccount;
-import Bflow.auth.entities.User;
-import Bflow.auth.enums.AuthProvider;
-import Bflow.auth.repository.RepositoryAuthAccount;
-import Bflow.auth.repository.RepositoryUser;
-import Bflow.auth.services.AuthService;
-import Bflow.common.exception.InvalidCredentialsException;
+import bflow.auth.DTO.AuthRegisterRequest;
+import bflow.auth.entities.AuthAccount;
+import bflow.auth.entities.User;
+import bflow.auth.enums.AuthProvider;
+import bflow.auth.repository.RepositoryAuthAccount;
+import bflow.auth.repository.RepositoryUser;
+import bflow.auth.services.AuthService;
+import bflow.common.exception.InvalidCredentialsException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

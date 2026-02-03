@@ -1,7 +1,7 @@
 package Diaz.Dev.BFlow.auth.security.jwt;
 
-import Bflow.auth.security.jwt.JwtAuthenticationFilter;
-import Bflow.auth.security.jwt.JwtService;
+import bflow.auth.security.jwt.JwtAuthenticationFilter;
+import bflow.auth.security.jwt.JwtService;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

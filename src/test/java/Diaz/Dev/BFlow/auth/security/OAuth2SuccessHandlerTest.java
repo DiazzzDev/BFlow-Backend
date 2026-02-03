@@ -1,10 +1,10 @@
 package Diaz.Dev.BFlow.auth.security;
 
-import Bflow.auth.entities.User;
-import Bflow.auth.enums.AuthProvider;
-import Bflow.auth.security.jwt.JwtService;
-import Bflow.auth.services.UserService;
-import Bflow.auth.security.OAuth2SuccessHandler;
+import bflow.auth.entities.User;
+import bflow.auth.enums.AuthProvider;
+import bflow.auth.security.jwt.JwtService;
+import bflow.auth.services.UserService;
+import bflow.auth.security.OAuth2SuccessHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;

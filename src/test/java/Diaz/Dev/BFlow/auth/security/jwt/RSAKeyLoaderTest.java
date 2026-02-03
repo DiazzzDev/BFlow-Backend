@@ -1,6 +1,6 @@
 package Diaz.Dev.BFlow.auth.security.jwt;
 
-import Bflow.auth.security.jwt.RSAKeyLoader;
+import bflow.auth.security.jwt.RSAKeyLoader;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
