@@ -123,7 +123,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> register(
             @Valid @RequestBody final AuthRegisterRequest request,
             final HttpServletRequest httpRequest
-    ){
+    ) {
         authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success("User registered successfully",
@@ -140,7 +140,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthMeResponse>> me(
             final Authentication authentication,
             final HttpServletRequest httpRequest
-    ){
+    ) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -157,9 +157,10 @@ public class AuthController {
             response.setEmail((String) map.get("email"));
         }
 
-        return ResponseEntity.ok(ApiResponse.success("User authenticated",
-                                                                response,
-                                                                httpRequest.getRequestURI()));
+        return ResponseEntity.ok(
+                ApiResponse.success("User authenticated",
+                                             response,
+                                             httpRequest.getRequestURI()));
     }
 
     /**

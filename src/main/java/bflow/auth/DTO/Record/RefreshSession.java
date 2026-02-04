@@ -10,7 +10,7 @@ import java.util.UUID;
  * @param expiresAt expiration timestamp.
  * @param current if this is the active session.
  */
-public record RefreshSession (
+public record RefreshSession(
         UUID id,
         Instant createdAt,
         Instant expiresAt,

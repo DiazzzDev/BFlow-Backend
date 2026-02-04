@@ -26,11 +26,11 @@ public class CorsConfig {
         configuration.addAllowedOrigin("http://127.0.0.1:5501");
 
         configuration.setAllowedMethods(List.of(
-                "GET","POST","PUT","PATCH","DELETE","OPTIONS"
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
 
         configuration.setAllowedHeaders(List.of(
-                "Content-Type","Accept","X-CSRF-TOKEN"
+                "Content-Type", "Accept", "X-CSRF-TOKEN"
         ));
 
         configuration.addExposedHeader("Set-Cookie");

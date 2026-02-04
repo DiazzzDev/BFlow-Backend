@@ -36,14 +36,19 @@ public final class AuthService {
      * @return the authenticated User entity.
      * @throws InvalidCredentialsException if authentication fails.
      */
-    public User authenticate(final String email, final String password) {
+    public User authenticate(
+            final String email,
+            final String password
+    ) {
 
         AuthAccount account = authAccountRepository
                 .findActiveByLoginAndProvider(email, AuthProvider.LOCAL)
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (account.getPasswordHash() == null
-                || !passwordEncoder.matches(password, account.getPasswordHash())) {
+                || !passwordEncoder.matches(
+                        password, account.getPasswordHash())
+        ) {
             throw new InvalidCredentialsException();
         }
 
@@ -98,7 +103,7 @@ public final class AuthService {
      * @param userId the user UUID.
      * @return the found User.
      */
-    public User findById(UUID userId) {
+    public User findById(final UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
     }

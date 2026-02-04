@@ -40,7 +40,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sess ->
-                        sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        sess.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        ))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -54,7 +56,7 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers( "/api/auth/login", "/api/auth/register",
+                    .requestMatchers("/api/auth/login", "/api/auth/register",
                             "/api/auth/refresh", "/.well-known/jwks.json")
                         .permitAll()
                     .requestMatchers("/login/oauth2/**", "/oauth2/**")

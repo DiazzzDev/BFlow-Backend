@@ -41,8 +41,8 @@ public final class GlobalExceptionHandler {
      */
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
-            InvalidCredentialsException ex,
-            HttpServletRequest request
+            final InvalidCredentialsException ex,
+            final HttpServletRequest request
     ) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)

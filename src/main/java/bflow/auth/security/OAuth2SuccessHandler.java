@@ -20,7 +20,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
+public final class OAuth2SuccessHandler
+        implements AuthenticationSuccessHandler {
 
     /** Service for JWT operations. */
     private final JwtService jwtService;
@@ -39,7 +40,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String providerId = oAuth2User.getAttribute("sub");
 
         if (email == null || providerId == null) {
-            throw new IllegalStateException("Google OAuth user missing required attributes");
+            throw new IllegalStateException(
+                    "Google OAuth user missing required attributes"
+            );
         }
 
         User user = userService.resolveOAuth2User(

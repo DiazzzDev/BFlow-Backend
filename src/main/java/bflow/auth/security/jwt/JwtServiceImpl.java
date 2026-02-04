@@ -58,8 +58,10 @@ public final class JwtServiceImpl implements JwtService {
             jwt.sign(new RSASSASigner(keys.privateKey()));
 
             return jwt.serialize();
-        }catch (Exception e){
-            throw new IllegalStateException("Error while generating JWT Token", e);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Error while generating JWT Token", e
+            );
         }
     }
 
@@ -114,7 +116,8 @@ public final class JwtServiceImpl implements JwtService {
             final String accessToken,
             final String refreshToken
     ) {
-        ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
+        ResponseCookie accessCookie =
+                ResponseCookie.from("access_token", accessToken)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
@@ -122,7 +125,8 @@ public final class JwtServiceImpl implements JwtService {
                 .maxAge(Duration.ofHours(1))
                 .build();
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+        ResponseCookie refreshCookie =
+                ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)
                 .secure(true)
                 .path("/api/auth/refresh")

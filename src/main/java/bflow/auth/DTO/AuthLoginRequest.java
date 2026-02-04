@@ -17,11 +17,13 @@ public class AuthLoginRequest {
     /** Maximum length for email and password fields. */
     private static final int MAX_LENGTH = 255;
 
+    /** The user's email address. */
     @Email
     @Size(min = MIN_EMAIL, max = MAX_LENGTH,
             message = "Email must be between 5 to 255 characters")
     private String email;
 
+    /** The user's plain-text password. */
     @Size(max = MAX_LENGTH,
             message = "Password cannot be longer than 255 characters")
     private String password;

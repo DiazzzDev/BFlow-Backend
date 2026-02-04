@@ -9,10 +9,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Implementation of {@link JwkService} that transforms RSA keys into JWK maps.
+ */
 @Service
 @RequiredArgsConstructor
-public class JwkServiceImpl implements JwkService {
+public final class JwkServiceImpl implements JwkService {
 
+    /** Provider for retrieving the current RSA key pairs. */
     private final RsaKeyProvider rsaKeyProvider;
 
     @Override
@@ -35,7 +39,9 @@ public class JwkServiceImpl implements JwkService {
                             .encodeToString(pub.getModulus().toByteArray()));
                     jwk.put("e", Base64.getUrlEncoder()
                             .withoutPadding()
-                            .encodeToString(pub.getPublicExponent().toByteArray()));
+                            .encodeToString(pub.getPublicExponent()
+                                    .toByteArray())
+                    );
 
                     return jwk;
                 })

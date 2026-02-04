@@ -12,14 +12,25 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service for managing refresh token lifecycle and security rotation.
+ */
 @Service
 @RequiredArgsConstructor
-public class ServiceRefreshToken {
+public final class ServiceRefreshToken {
+
+    /** Time-to-live for refresh tokens (14 days). */
     private static final Duration TTL = Duration.ofDays(14);
 
+    /** Repository for token persistence. */
     private final RepositoryRefreshToken repository;
 
-    public void create(UUID userId, String rawToken) {
+    /**
+     * Creates and persists a new refresh token.
+     * @param userId the owner of the token.
+     * @param rawToken the plain text token to be hashed.
+     */
+    public void create(final UUID userId, final String rawToken) {
         RefreshToken rt = new RefreshToken();
         rt.setId(UUID.randomUUID());
         rt.setUserId(userId);
@@ -31,12 +42,19 @@ public class ServiceRefreshToken {
         repository.save(rt);
     }
 
-    public void validateAndRotate(String rawToken) {
+    /**
+     * Validates a token and revokes it as part of a rotation check.
+     * @param rawToken the plain text token.
+     */
+    public void validateAndRotate(final String rawToken) {
         String hash = hash(rawToken);
 
-        RefreshToken existing = repository.findByTokenHash(hash).orElseThrow(() -> new SecurityException("Invalid refresh token"));
+        RefreshToken existing = repository.findByTokenHash(hash)
+                .orElseThrow(() ->
+                        new SecurityException("Invalid refresh token"));
 
-        if (existing.isRevoked() || existing.getExpiresAt().isBefore(Instant.now())) {
+        if (existing.isRevoked()
+                || existing.getExpiresAt().isBefore(Instant.now())) {
             revokeAll(existing.getUserId());
             throw new SecurityException("Refresh token reuse detected");
         }
@@ -46,11 +64,17 @@ public class ServiceRefreshToken {
 
     }
 
-    public RefreshToken validate(String rawToken) {
+    /**
+     * Validates a token without revoking it.
+     * @param rawToken the plain text token.
+     * @return the RefreshToken entity.
+     */
+    public RefreshToken validate(final String rawToken) {
         String hash = hash(rawToken);
 
         RefreshToken token = repository.findByTokenHash(hash)
-                .orElseThrow(() -> new SecurityException("Invalid refresh token"));
+                .orElseThrow(() ->
+                        new SecurityException("Invalid refresh token"));
 
         if (token.isRevoked() || token.getExpiresAt().isBefore(Instant.now())) {
             throw new SecurityException("Invalid refresh token");
@@ -59,11 +83,17 @@ public class ServiceRefreshToken {
         return token;
     }
 
-    public RefreshRotationResult rotate(String rawToken) {
+    /**
+     * Performs a full token rotation, issuing a new token.
+     * @param rawToken the old plain text token.
+     * @return the result containing user ID and the new raw token.
+     */
+    public RefreshRotationResult rotate(final String rawToken) {
         String hash = hash(rawToken);
 
         RefreshToken existing = repository.findByTokenHash(hash)
-                .orElseThrow(() -> new SecurityException("Invalid refresh token"));
+                .orElseThrow(() ->
+                        new SecurityException("Invalid refresh token"));
 
         if (existing.getExpiresAt().isBefore(Instant.now())) {
             revokeAll(existing.getUserId());
@@ -93,12 +123,19 @@ public class ServiceRefreshToken {
         return new RefreshRotationResult(existing.getUserId(), newRawToken);
     }
 
+    /**
+     * Lists all active (non-expired, non-revoked) sessions for a user.
+     * @param userId the user ID.
+     * @param currentTokenId the ID of the token currently in use.
+     * @return list of active sessions.
+     */
     public List<RefreshSession> listActiveSessions(
-            UUID userId,
-            UUID currentTokenId
+            final UUID userId,
+            final UUID currentTokenId
     ) {
         return repository
-                .findAllByUserIdAndRevokedFalseAndExpiresAtAfter(userId, Instant.now())
+                .findAllByUserIdAndRevokedFalseAndExpiresAtAfter(
+                        userId, Instant.now())
                 .stream()
                 .map(rt -> new RefreshSession(
                         rt.getId(),
@@ -109,8 +146,11 @@ public class ServiceRefreshToken {
                 .toList();
     }
 
-
-    public void revokeAll(UUID userId) {
+    /**
+     * Revokes all active tokens for a specific user (Security Nuclear Option).
+     * @param userId the user ID.
+     */
+    public void revokeAll(final UUID userId) {
         repository.findAllByUserIdAndRevokedFalse(userId)
                 .forEach(rt -> {
                     rt.setRevoked(true);
@@ -118,8 +158,12 @@ public class ServiceRefreshToken {
                 });
     }
 
-    private String hash(String token) {
+    /**
+     * Internal helper to hash tokens.
+     * @param token raw token string.
+     * @return SHA-256 hash.
+     */
+    private String hash(final String token) {
         return DigestUtils.sha256Hex(token);
     }
-
 }

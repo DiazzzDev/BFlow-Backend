@@ -22,7 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 @AllArgsConstructor
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public final class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /** Service for JWT parsing and validation. */
     private final JwtService jwtService;
@@ -57,7 +57,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             authentication.setDetails(Map.of("email", email));
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
@@ -81,7 +82,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * @return the token value or null if not found.
      */
     private String extractTokenFromCookie(final HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null) {
+            return null;
+        }
 
         for (Cookie cookie : request.getCookies()) {
             if ("access_token".equals(cookie.getName())) {
