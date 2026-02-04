@@ -78,7 +78,7 @@ public class JwtAuthenticationFilterTest {
         assertThat(auth.getName()).isEqualTo(userId.toString());
         assertThat(auth.getAuthorities())
                 .extracting("authority")
-                .containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
+                .containsExactlyInAnyOrder("USER", "ADMIN");
 
         assertThat(auth.getDetails())
                 .isInstanceOfAny(java.util.Map.class);

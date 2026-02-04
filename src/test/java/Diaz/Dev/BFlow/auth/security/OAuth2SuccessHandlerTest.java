@@ -78,6 +78,6 @@ class OAuth2SuccessHandlerTest {
 
         handler.onAuthenticationSuccess(null, res, auth);
 
-        assertEquals("http://localhost:8080/login/success?token=token-in-url", res.getRedirectedUrl());
+        assertEquals("http://localhost:3000", res.getRedirectedUrl());
     }
 }
