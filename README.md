@@ -29,6 +29,25 @@ BFlow (Budget Flow) is an open-source expense & budget tracking backend built wi
     ./mvnw spring-boot:run
 ```
 
+### JWT RSA Keys (RS256)
+
+This project uses RSA (RS256) for signing JWT access tokens.
+
+#### Generate keys (development only)
+
+```bash
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in private.pem -out public.pem
+```
+
+### Run testing:
+
+If you want to test if everything is good for a pull request you can test it with the following command:
+
+```bash
+    ./mvnw test
+```
+
 ## Troubleshooting during setup
 
 ### My containers had trouble:
