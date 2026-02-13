@@ -9,7 +9,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
  * Configuration for JWT decoding using JWKS.
  */
 @Configuration
-public final class JwtConfig {
+public class JwtConfig {
 
     /**
      * Configures the JwtDecoder bean.

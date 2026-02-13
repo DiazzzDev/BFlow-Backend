@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
-public final class ServiceRefreshToken {
+public class ServiceRefreshToken {
 
     /** Time-to-live for refresh tokens (14 days). */
     private static final Duration TTL = Duration.ofDays(14);

@@ -17,13 +17,21 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public final class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService {
 
     /** Repository for user core data. */
     private final RepositoryUser userRepository;
     /** Repository for authentication account mapping. */
     private final RepositoryAuthAccount authAccountRepository;
 
+    /**
+     * Resolves an OAuth2 user by email, provider ID, and provider type.
+     * Handles user validation and creation for OAuth2 authentication.
+     * @param email the user's email address.
+     * @param providerId the provider-specific user identifier.
+     * @param provider the authentication provider.
+     * @return the resolved or newly created User entity.
+     */
     @Override
     public User resolveOAuth2User(
             final String email,
@@ -80,6 +88,13 @@ public final class UserServiceImpl implements UserService {
         return user;
     }
 
+    /**
+     * Finds an existing OAuth2 user by email or creates a new one.
+     * This method ensures that a user account exists in the system.
+     * @param email the user's email address.
+     * @param provider the authentication provider.
+     * @return the existing or newly created User entity.
+     */
     @Override
     public User findOrCreateOAuthUser(
             final String email,
@@ -97,6 +112,12 @@ public final class UserServiceImpl implements UserService {
                 ));
     }
 
+    /**
+     * Finds a user by their unique identifier.
+     * @param id the user's unique identifier (UUID).
+     * @return the User entity.
+     * @throws IllegalStateException if the user is not found.
+     */
     @Override
     public User findById(final UUID id) {
         return userRepository.findById(id)

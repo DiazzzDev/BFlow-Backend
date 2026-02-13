@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-public final class AuthService {
+public class AuthService {
 
     /** Repository for authentication account data. */
     private final RepositoryAuthAccount authAccountRepository;

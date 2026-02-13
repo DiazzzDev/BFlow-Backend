@@ -7,11 +7,13 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import org.springframework.stereotype.Component;
 
 /**
  * Utility class to load RSA keys from PEM formatted streams.
  */
-public final class RSAKeyLoader {
+@Component
+public class RSAKeyLoader {
 
     /**
      * Loads a private key from an input stream.

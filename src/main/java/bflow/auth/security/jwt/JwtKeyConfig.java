@@ -11,7 +11,7 @@ import java.security.interfaces.RSAPublicKey;
  * Configuration class for loading JWT RSA keys.
  */
 @Configuration
-public final class JwtKeyConfig {
+public class JwtKeyConfig {
 
     /**
      * Loads the RSA private key from the classpath.
