@@ -10,6 +10,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.UUID;
 
 /**
@@ -17,6 +20,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "wallet_users")
+@Getter
+@Setter
 public class WalletUser {
 
     /** Unique identifier for the relationship record. */

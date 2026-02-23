@@ -2,11 +2,14 @@ package bflow.wallet.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.EnumType;
 import java.math.BigDecimal;
 import java.time.Instant;
+import bflow.wallet.enums.Currency;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -39,9 +42,14 @@ public class Wallet {
     @Column(nullable = false)
     private String name;
 
-    /** The currency code (e.g., USD, EUR). */
+    /** The display name of the wallet. */
     @Column(nullable = false)
-    private String currency; // "USD", "EUR"
+    private String description;
+
+    /** The currency code (e.g., USD, EUR). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Currency currency; // "USD", "EUR"
 
     /** The current available balance. */
     @Column(nullable = false)
@@ -54,4 +62,9 @@ public class Wallet {
     /** The timestamp when the wallet was created. */
     @CreationTimestamp
     private Instant createdAt;
+
+    /** The timestamp when the wallet was updated. */
+    @CreationTimestamp
+    private Instant updatedAt;
+
 }
