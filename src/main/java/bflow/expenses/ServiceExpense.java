@@ -69,6 +69,38 @@ public class ServiceExpense {
         return mapToResponse(savedExpense);
     }
 
+    public void deleteExpense(
+            final UUID expenseId,
+            final UUID userId
+    ) {
+
+        Expense expense = repositoryExpense.findById(expenseId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Expense not found")
+                );
+
+        // Validate access
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        expense.getWallet().getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to this wallet"
+                        )
+                );
+
+        Wallet wallet = expense.getWallet();
+
+        // Subtract expense from wallet balance
+        wallet.setBalance(
+                wallet.getBalance().add(expense.getAmount())
+        );
+
+        repositoryExpense.delete(expense);
+    }
+
     /**
      * Maps ExpenseRequest → Expense entity
      */
