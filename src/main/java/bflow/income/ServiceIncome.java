@@ -2,6 +2,7 @@ package bflow.income;
 
 import bflow.auth.entities.User;
 import bflow.auth.repository.RepositoryUser;
+import bflow.expenses.entity.Expense;
 import bflow.income.DTO.IncomeRequest;
 import bflow.income.DTO.IncomeResponse;
 import bflow.income.entity.Income;
@@ -84,6 +85,38 @@ public class ServiceIncome {
         Income savedIncome = repositoryIncome.save(income);
 
         return mapToResponse(savedIncome);
+    }
+
+    public void deleteIncome(
+            final UUID incomeId,
+            final UUID userId
+    ) {
+
+        Income income = repositoryIncome.findById(incomeId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Income not found")
+                );
+
+        // Validate access
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        income.getWallet().getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to this wallet"
+                        )
+                );
+
+        Wallet wallet = income.getWallet();
+
+        // Subtract income value from wallet balance
+        wallet.setBalance(
+                wallet.getBalance().subtract(income.getAmount())
+        );
+
+        repositoryIncome.delete(income);
     }
 
     /**

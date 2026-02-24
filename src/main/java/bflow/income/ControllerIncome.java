@@ -8,10 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.UUID;
 
 /**
@@ -52,5 +50,20 @@ public class ControllerIncome {
                         response,
                         "/api/v1/incomes"
                 ));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteIncome(
+            @PathVariable String id,
+            final Authentication authentication
+    ){
+        String userIdString = (String) authentication.getPrincipal();
+        UUID userId = UUID.fromString(userIdString);
+
+        UUID incomeId = UUID.fromString(id);
+
+        serviceIncome.deleteIncome(incomeId, userId);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

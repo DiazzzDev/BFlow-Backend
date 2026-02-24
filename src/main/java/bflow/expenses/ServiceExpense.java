@@ -93,7 +93,7 @@ public class ServiceExpense {
 
         Wallet wallet = expense.getWallet();
 
-        // Subtract expense from wallet balance
+        // Subtract expense value from wallet balance
         wallet.setBalance(
                 wallet.getBalance().add(expense.getAmount())
         );
