@@ -136,6 +136,7 @@ public class ServiceIncome {
         response.setDescription(income.getDescription());
         response.setAmount(income.getAmount());
         response.setDate(income.getDate());
+
         response.setIncomeType(income.getType().name());
 
         response.setWalletId(income.getWallet().getId().toString());
@@ -143,6 +144,10 @@ public class ServiceIncome {
 
         response.setContributorId(income.getContributor().getId()
                 .toString());
+
+        response.setContributorName(
+                income.getContributor().getEmail()
+        );
 
         response.setCreatedAt(income.getCreatedAt());
 
