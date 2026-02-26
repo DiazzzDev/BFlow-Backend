@@ -5,6 +5,7 @@ import bflow.auth.repository.RepositoryUser;
 import bflow.expenses.DTO.ExpenseRequest;
 import bflow.expenses.DTO.ExpenseResponse;
 import bflow.expenses.entity.Expense;
+import bflow.wallet.RepositoryWallet;
 import bflow.wallet.RepositoryWalletUser;
 import bflow.wallet.entities.Wallet;
 import bflow.wallet.entities.WalletUser;
@@ -12,7 +13,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
 
@@ -31,6 +32,8 @@ public class ServiceExpense {
      * Repository for user entity operations.
      */
     private final RepositoryUser repositoryUser;
+
+    private final RepositoryWallet repositoryWallet;
 
     public ExpenseResponse newExpense(
             final ExpenseRequest request,
@@ -67,6 +70,87 @@ public class ServiceExpense {
         Expense savedExpense = repositoryExpense.save(expense);
 
         return mapToResponse(savedExpense);
+    }
+
+    public ExpenseResponse updateExpense(
+            final UUID expenseId,
+            final ExpenseRequest request,
+            final UUID userId
+    ) {
+        Expense expense = repositoryExpense.findById(expenseId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Expense not found")
+                );
+
+        Wallet oldWallet = expense.getWallet();
+
+        // Validate access
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        oldWallet.getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to this wallet"
+                        )
+                );
+
+        Wallet newWallet = repositoryWallet.findById(request.getWalletId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Target wallet not found")
+                );
+
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        newWallet.getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to the target wallet"
+                        )
+                );
+
+        BigDecimal oldAmount = expense.getAmount();
+        BigDecimal newAmount = request.getAmount();
+
+        if (oldWallet.getId().equals(newWallet.getId())) {
+
+            // Same wallet → apply difference
+            BigDecimal difference = newAmount.add(oldAmount);
+            oldWallet.setBalance(
+                    oldWallet.getBalance().subtract(difference)
+            );
+
+        } else {
+
+            // Different wallet → full transfer logic
+
+            // Remove old impact
+            oldWallet.setBalance(
+                    oldWallet.getBalance().add(oldAmount)
+            );
+
+            // Apply new impact
+            newWallet.setBalance(
+                    newWallet.getBalance().subtract(newAmount)
+            );
+
+            // Reassign wallet
+            expense.setWallet(newWallet);
+        }
+
+        expense.setTitle(request.getTitle());
+        expense.setDescription(request.getDescription());
+        expense.setAmount(newAmount);
+        expense.setDate(request.getDate());
+        expense.setType(request.getType());
+        expense.setTaxDeductible(Boolean.TRUE.equals(request.getTaxDeductible()));
+        expense.setRecurring(Boolean.TRUE.equals(request.getRecurring()));
+        expense.setRecurrencePattern(request.getRecurrencePattern());
+
+        return mapToResponse(expense);
     }
 
     public void deleteExpense(
