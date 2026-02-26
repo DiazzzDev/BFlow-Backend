@@ -52,6 +52,27 @@ public class ControllerIncome {
                 ));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<IncomeResponse>> updateIncome(
+            @PathVariable String id,
+            @Valid @RequestBody final IncomeRequest request,
+            final Authentication authentication
+    ){
+        String userIdString = (String) authentication.getPrincipal();
+        UUID userId = UUID.fromString(userIdString);
+
+        UUID incomeId = UUID.fromString(id);
+
+        IncomeResponse response = serviceIncome.updateIncome(incomeId, request, userId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        "Income updated successfully",
+                        response,
+                        "/api/v1/incomes"
+                ));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteIncome(
             @PathVariable String id,

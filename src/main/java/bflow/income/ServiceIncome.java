@@ -6,6 +6,7 @@ import bflow.expenses.entity.Expense;
 import bflow.income.DTO.IncomeRequest;
 import bflow.income.DTO.IncomeResponse;
 import bflow.income.entity.Income;
+import bflow.wallet.RepositoryWallet;
 import bflow.wallet.RepositoryWalletUser;
 import bflow.wallet.entities.Wallet;
 import bflow.wallet.entities.WalletUser;
@@ -13,6 +14,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
 
@@ -33,6 +36,8 @@ public class ServiceIncome {
      * Repository for wallet user entity operations.
      */
     private final RepositoryWalletUser repositoryWalletUser;
+
+    private final RepositoryWallet repositoryWallet;
 
     /**
      * Repository for user entity operations.
@@ -85,6 +90,88 @@ public class ServiceIncome {
         Income savedIncome = repositoryIncome.save(income);
 
         return mapToResponse(savedIncome);
+    }
+
+    public IncomeResponse updateIncome(
+            final UUID incomeId,
+            final IncomeRequest request,
+            final UUID userId
+    ) {
+        Income income = repositoryIncome.findById(incomeId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Income not found")
+                );
+
+        Wallet oldWallet = income.getWallet();
+
+        // Validate access
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        oldWallet.getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to this wallet"
+                        )
+                );
+
+        Wallet newWallet = repositoryWallet.findById(request.getWalletId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Target wallet not found")
+                );
+
+        repositoryWalletUser
+                .findByWalletIdAndUserId(
+                        newWallet.getId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new AccessDeniedException(
+                                "You do not have access to the target wallet"
+                        )
+                );
+
+        BigDecimal oldAmount = income.getAmount();
+        BigDecimal newAmount = request.getAmount();
+
+        if (oldWallet.getId().equals(newWallet.getId())) {
+
+            // Same wallet → apply difference
+            BigDecimal difference = newAmount.subtract(oldAmount);
+            oldWallet.setBalance(
+                    oldWallet.getBalance().add(difference)
+            );
+
+        } else {
+
+            // Different wallet → full transfer logic
+
+            // Remove old impact
+            oldWallet.setBalance(
+                    oldWallet.getBalance().subtract(oldAmount)
+            );
+
+            // Apply new impact
+            newWallet.setBalance(
+                    newWallet.getBalance().add(newAmount)
+            );
+
+            // Reassign wallet
+            income.setWallet(newWallet);
+        }
+
+        income.setTitle(request.getTitle());
+        income.setDescription(request.getDescription());
+        income.setAmount(newAmount);
+        income.setDate(request.getDate());
+        income.setType(request.getType());
+        income.setTaxable(Boolean.TRUE.equals(request.getTaxable()));
+        income.setRecurring(Boolean.TRUE.equals(request.getRecurring()));
+        income.setRecurrencePattern(request.getRecurrencePattern());
+
+
+        return mapToResponse(income);
     }
 
     public void deleteIncome(
