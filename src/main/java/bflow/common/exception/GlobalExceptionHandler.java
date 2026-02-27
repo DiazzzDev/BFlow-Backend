@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -53,6 +54,86 @@ public final class GlobalExceptionHandler {
     }
 
     /**
+     * Handles resource not found exceptions.
+     * @param ex the exception.
+     * @param request the current request.
+     * @return error response with NOT_FOUND status.
+     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(
+            final NotFoundException ex,
+            final HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+
+    /**
+     * Handles IllegalArgumentExceptions that represent missing resources.
+     * Treated as 404 Not Found per convention.
+     * @param ex the exception.
+     * @param request the current request.
+     * @return error response with NOT_FOUND status.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(
+            final IllegalArgumentException ex,
+            final HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+
+    /**
+     * Handles access denied exceptions (permission violations).
+     * @param ex the exception.
+     * @param request the current request.
+     * @return error response with FORBIDDEN status.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
+            final AccessDeniedException ex,
+            final HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(
+                        ex.getMessage() != null
+                            ? ex.getMessage()
+                            : "Access denied",
+                        request.getRequestURI()
+                ));
+    }
+
+    /**
+     * Handles wallet access denied exceptions (wallet-specific permission
+     * violations).
+     * @param ex the exception.
+     * @param request the current request.
+     * @return error response with FORBIDDEN status.
+     */
+    @ExceptionHandler(WalletAccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleWalletAccessDenied(
+            final WalletAccessDeniedException ex,
+            final HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+
+    /**
      * Handles bean validation errors.
      * @param ex the exception.
      * @param request the current request.
@@ -62,8 +143,10 @@ public final class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             final MethodArgumentNotValidException ex,
             final HttpServletRequest request) {
-        String errorMsg = ex.getBindingResult().getFieldErrors().stream()
-            .map(err -> err.getField() + ": " + err.getDefaultMessage())
+        String errorMsg = ex.getBindingResult().getFieldErrors()
+            .stream()
+            .map(err -> err.getField() + ": "
+                + err.getDefaultMessage())
             .collect(Collectors.joining(", "));
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
@@ -80,8 +163,9 @@ public final class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleGeneric(
             final Exception ex,
             final HttpServletRequest request) {
-        log.error("UNHANDLED EXCEPTION at {} {}",
-                request.getMethod(), request.getRequestURI(), ex);
+        log.error("UNHANDLED EXCEPTION at {} {} - {}",
+                request.getMethod(), request.getRequestURI(),
+                ex.getClass().getSimpleName(), ex);
 
         ApiResponse<?> response = ApiResponse.error(
                 "Internal server error",

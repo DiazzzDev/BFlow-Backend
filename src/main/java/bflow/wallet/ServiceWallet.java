@@ -120,4 +120,100 @@ public class ServiceWallet {
                 .createdAt(savedWallet.getCreatedAt())
                 .build();
     }
+
+    /**
+     * Adds the specified amount to the wallet's balance.
+     *
+     * @param wallet the wallet to update (not null).
+     * @param amount the amount to add (must be non-negative).
+     * @throws IllegalArgumentException if amount is negative.
+     */
+    public void addBalance(final Wallet wallet, final BigDecimal amount) {
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Amount cannot be negative: " + amount
+            );
+        }
+        BigDecimal newBalance = wallet.getBalance().add(amount);
+        wallet.setBalance(newBalance);
+    }
+
+    /**
+     * Subtracts the specified amount from the wallet's balance.
+     *
+     * @param wallet the wallet to update (not null).
+     * @param amount the amount to subtract (must be non-negative).
+     * @throws IllegalArgumentException if amount is negative or
+     *         if balance would become negative.
+     */
+    public void subtractBalance(final Wallet wallet, final BigDecimal amount) {
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Amount cannot be negative: " + amount
+            );
+        }
+        BigDecimal newBalance = wallet.getBalance().subtract(amount);
+        if (newBalance.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Insufficient balance: " + wallet.getBalance()
+            );
+        }
+        wallet.setBalance(newBalance);
+    }
+
+    /**
+     * Adjusts the wallet balance for an update transaction.
+     * Reverses the old amount and applies the new amount.
+     *
+     * @param wallet the wallet to update (not null).
+     * @param oldAmount the previous transaction amount (not null).
+     * @param newAmount the new transaction amount (not null).
+     * @throws IllegalArgumentException if oldAmount or newAmount
+     *         are negative, or if adjusted balance would be negative.
+     */
+    public void adjustBalanceForUpdate(
+            final Wallet wallet,
+            final BigDecimal oldAmount,
+            final BigDecimal newAmount
+    ) {
+        if (oldAmount.signum() < 0 || newAmount.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Amounts must be non-negative"
+            );
+        }
+
+        // Reverse the impact of old amount
+        BigDecimal difference = newAmount.subtract(oldAmount);
+        BigDecimal adjustedBalance = wallet.getBalance().add(difference);
+
+        if (adjustedBalance.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Insufficient balance for adjustment"
+            );
+        }
+
+        wallet.setBalance(adjustedBalance);
+    }
+
+    /**
+     * Reverses the impact of a transaction on the wallet balance.
+     * Used when a transaction is deleted.
+     *
+     * @param wallet the wallet to update (not null).
+     * @param amount the transaction amount to reverse (not null).
+     * @throws IllegalArgumentException if amount is negative.
+     */
+    public void reverseTransactionImpact(
+            final Wallet wallet,
+            final BigDecimal amount
+    ) {
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "Amount cannot be negative: " + amount
+            );
+        }
+        // Add back the amount since we're reversing an expense
+        BigDecimal newBalance = wallet.getBalance().add(amount);
+        wallet.setBalance(newBalance);
+    }
 }

@@ -2,17 +2,18 @@ package bflow.income;
 
 import bflow.auth.entities.User;
 import bflow.auth.repository.RepositoryUser;
-import bflow.expenses.entity.Expense;
+import bflow.common.exception.ResourceNotFoundException;
+import bflow.common.exception.WalletAccessDeniedException;
 import bflow.income.DTO.IncomeRequest;
 import bflow.income.DTO.IncomeResponse;
 import bflow.income.entity.Income;
 import bflow.wallet.RepositoryWallet;
 import bflow.wallet.RepositoryWalletUser;
+import bflow.wallet.ServiceWallet;
 import bflow.wallet.entities.Wallet;
 import bflow.wallet.entities.WalletUser;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -37,12 +38,20 @@ public class ServiceIncome {
      */
     private final RepositoryWalletUser repositoryWalletUser;
 
+    /**
+     * Repository for wallet entity operations.
+     */
     private final RepositoryWallet repositoryWallet;
 
     /**
      * Repository for user entity operations.
      */
     private final RepositoryUser repositoryUser;
+
+    /**
+     * Service for wallet business logic operations.
+     */
+    private final ServiceWallet serviceWallet;
 
     /**
      * Creates a new income entry for the specified wallet and user.
@@ -63,7 +72,7 @@ public class ServiceIncome {
                 .findByWalletIdAndUserId(request.getWalletId(),
                         userId)
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
@@ -73,7 +82,7 @@ public class ServiceIncome {
         // Get contributor
         User contributor = repositoryUser.findById(userId)
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "Authenticated user not found"
                         )
                 );
@@ -81,10 +90,8 @@ public class ServiceIncome {
         // Map dto to entity
         Income income = mapToEntity(request, wallet, contributor);
 
-        // Add income to wallet
-        wallet.setBalance(
-                wallet.getBalance().add(income.getAmount())
-        );
+        // Add income to wallet using service method
+        serviceWallet.addBalance(wallet, income.getAmount());
 
         // Save income into database
         Income savedIncome = repositoryIncome.save(income);
@@ -92,6 +99,17 @@ public class ServiceIncome {
         return mapToResponse(savedIncome);
     }
 
+    /**
+     * Updates an existing income entry for the specified user.
+     *
+     * @param incomeId the unique identifier of the income to update
+     * @param request the income request containing updated income details
+     * @param userId the unique identifier of the authenticated user
+     * @return the updated income as an IncomeResponse
+     * @throws ResourceNotFoundException if the income is not found
+     * @throws WalletAccessDeniedException if the user lacks access to
+     *         the wallets
+     */
     public IncomeResponse updateIncome(
             final UUID incomeId,
             final IncomeRequest request,
@@ -99,7 +117,7 @@ public class ServiceIncome {
     ) {
         Income income = repositoryIncome.findById(incomeId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Income not found")
+                        new ResourceNotFoundException("Income not found")
                 );
 
         Wallet oldWallet = income.getWallet();
@@ -111,14 +129,14 @@ public class ServiceIncome {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
 
         Wallet newWallet = repositoryWallet.findById(request.getWalletId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Target wallet not found")
+                        new ResourceNotFoundException("Target wallet not found")
                 );
 
         repositoryWalletUser
@@ -127,7 +145,7 @@ public class ServiceIncome {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to the target wallet"
                         )
                 );
@@ -137,25 +155,22 @@ public class ServiceIncome {
 
         if (oldWallet.getId().equals(newWallet.getId())) {
 
-            // Same wallet → apply difference
-            BigDecimal difference = newAmount.subtract(oldAmount);
-            oldWallet.setBalance(
-                    oldWallet.getBalance().add(difference)
+            // Same wallet → apply difference using service method
+            serviceWallet.adjustBalanceForUpdate(
+                    oldWallet,
+                    oldAmount,
+                    newAmount
             );
 
         } else {
 
-            // Different wallet → full transfer logic
+            // Different wallet → full transfer logic using service methods
 
             // Remove old impact
-            oldWallet.setBalance(
-                    oldWallet.getBalance().subtract(oldAmount)
-            );
+            serviceWallet.reverseTransactionImpact(oldWallet, oldAmount);
 
             // Apply new impact
-            newWallet.setBalance(
-                    newWallet.getBalance().add(newAmount)
-            );
+            serviceWallet.addBalance(newWallet, newAmount);
 
             // Reassign wallet
             income.setWallet(newWallet);
@@ -174,6 +189,15 @@ public class ServiceIncome {
         return mapToResponse(income);
     }
 
+    /**
+     * Deletes an income entry for the specified user.
+     *
+     * @param incomeId the unique identifier of the income to delete
+     * @param userId the unique identifier of the authenticated user
+     * @throws ResourceNotFoundException if the income is not found
+     * @throws WalletAccessDeniedException if the user does not have access
+     *         to the wallet
+     */
     public void deleteIncome(
             final UUID incomeId,
             final UUID userId
@@ -181,7 +205,7 @@ public class ServiceIncome {
 
         Income income = repositoryIncome.findById(incomeId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Income not found")
+                        new ResourceNotFoundException("Income not found")
                 );
 
         // Validate access
@@ -191,17 +215,15 @@ public class ServiceIncome {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
 
         Wallet wallet = income.getWallet();
 
-        // Subtract income value from wallet balance
-        wallet.setBalance(
-                wallet.getBalance().subtract(income.getAmount())
-        );
+        // Reverse the income impact on wallet balance using service method
+        serviceWallet.subtractBalance(wallet, income.getAmount());
 
         repositoryIncome.delete(income);
     }

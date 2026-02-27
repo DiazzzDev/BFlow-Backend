@@ -8,7 +8,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
@@ -52,18 +58,32 @@ public class ControllerIncome {
                 ));
     }
 
+    /**
+     * Updates an existing income entry for the authenticated user.
+     *
+     * @param id the unique identifier of the income to update
+     * @param request the income request containing updated income details
+     * @param authentication the authentication object containing the
+     *        authenticated user's principal (UUID)
+     * @return a ResponseEntity containing the updated income response with
+     *         HTTP 200 OK status
+     */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<IncomeResponse>> updateIncome(
-            @PathVariable String id,
+            @PathVariable final String id,
             @Valid @RequestBody final IncomeRequest request,
             final Authentication authentication
-    ){
+    ) {
         String userIdString = (String) authentication.getPrincipal();
         UUID userId = UUID.fromString(userIdString);
 
         UUID incomeId = UUID.fromString(id);
 
-        IncomeResponse response = serviceIncome.updateIncome(incomeId, request, userId);
+        IncomeResponse response = serviceIncome.updateIncome(
+                incomeId,
+                request,
+                userId
+        );
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.success(
@@ -73,11 +93,19 @@ public class ControllerIncome {
                 ));
     }
 
+    /**
+     * Deletes an existing income entry for the authenticated user.
+     *
+     * @param id the unique identifier of the income to delete
+     * @param authentication the authentication object containing the
+     *        authenticated user's principal (UUID)
+     * @return a ResponseEntity with HTTP 204 No Content status
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteIncome(
-            @PathVariable String id,
+            @PathVariable final String id,
             final Authentication authentication
-    ){
+    ) {
         String userIdString = (String) authentication.getPrincipal();
         UUID userId = UUID.fromString(userIdString);
 

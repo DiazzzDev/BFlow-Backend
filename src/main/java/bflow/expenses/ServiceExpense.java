@@ -2,16 +2,18 @@ package bflow.expenses;
 
 import bflow.auth.entities.User;
 import bflow.auth.repository.RepositoryUser;
+import bflow.common.exception.ResourceNotFoundException;
+import bflow.common.exception.WalletAccessDeniedException;
 import bflow.expenses.DTO.ExpenseRequest;
 import bflow.expenses.DTO.ExpenseResponse;
 import bflow.expenses.entity.Expense;
 import bflow.wallet.RepositoryWallet;
 import bflow.wallet.RepositoryWalletUser;
+import bflow.wallet.ServiceWallet;
 import bflow.wallet.entities.Wallet;
 import bflow.wallet.entities.WalletUser;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,6 +23,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class ServiceExpense {
+    /**
+     * Repository for expense entity operations.
+     */
     private final RepositoryExpense repositoryExpense;
 
     /**
@@ -33,8 +38,25 @@ public class ServiceExpense {
      */
     private final RepositoryUser repositoryUser;
 
+    /**
+     * Repository for wallet entity operations.
+     */
     private final RepositoryWallet repositoryWallet;
 
+    /**
+     * Service for wallet business logic operations.
+     */
+    private final ServiceWallet serviceWallet;
+
+    /**
+     * Creates a new expense entry for the specified wallet and user.
+     *
+     * @param request the expense request containing expense details
+     * @param userId the unique identifier of the authenticated user
+     * @return the created expense as an ExpenseResponse
+     * @throws WalletAccessDeniedException if the user does not have access
+     *         to the wallet
+     */
     public ExpenseResponse newExpense(
             final ExpenseRequest request,
             final UUID userId
@@ -44,7 +66,7 @@ public class ServiceExpense {
         WalletUser walletUser = repositoryWalletUser
                 .findByWalletIdAndUserId(request.getWalletId(), userId)
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
@@ -54,7 +76,7 @@ public class ServiceExpense {
         // Get contributor
         User contributor = repositoryUser.findById(userId)
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "Authenticated user not found"
                         )
                 );
@@ -62,16 +84,25 @@ public class ServiceExpense {
         // Map DTO → Entity
         Expense expense = mapToEntity(request, wallet, contributor);
 
-        // Subtract expense from wallet balance
-        wallet.setBalance(
-                wallet.getBalance().subtract(expense.getAmount())
-        );
+        // Subtract expense from wallet balance using service method
+        serviceWallet.subtractBalance(wallet, expense.getAmount());
 
         Expense savedExpense = repositoryExpense.save(expense);
 
         return mapToResponse(savedExpense);
     }
 
+    /**
+     * Updates an existing expense entry for the specified user.
+     *
+     * @param expenseId the unique identifier of the expense to update
+     * @param request the expense request containing updated details
+     * @param userId the unique identifier of the authenticated user
+     * @return the updated expense as an ExpenseResponse
+     * @throws ResourceNotFoundException if the expense is not found
+     * @throws WalletAccessDeniedException if the user lacks access to
+     *         the wallets
+     */
     public ExpenseResponse updateExpense(
             final UUID expenseId,
             final ExpenseRequest request,
@@ -79,7 +110,7 @@ public class ServiceExpense {
     ) {
         Expense expense = repositoryExpense.findById(expenseId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Expense not found")
+                        new ResourceNotFoundException("Expense not found")
                 );
 
         Wallet oldWallet = expense.getWallet();
@@ -91,14 +122,14 @@ public class ServiceExpense {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
 
         Wallet newWallet = repositoryWallet.findById(request.getWalletId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Target wallet not found")
+                        new ResourceNotFoundException("Target wallet not found")
                 );
 
         repositoryWalletUser
@@ -107,7 +138,7 @@ public class ServiceExpense {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to the target wallet"
                         )
                 );
@@ -117,25 +148,22 @@ public class ServiceExpense {
 
         if (oldWallet.getId().equals(newWallet.getId())) {
 
-            // Same wallet → apply difference
-            BigDecimal difference = newAmount.add(oldAmount);
-            oldWallet.setBalance(
-                    oldWallet.getBalance().subtract(difference)
+            // Same wallet → apply difference using service method
+            serviceWallet.adjustBalanceForUpdate(
+                    oldWallet,
+                    oldAmount,
+                    newAmount
             );
 
         } else {
 
-            // Different wallet → full transfer logic
+            // Different wallet → full transfer logic using service methods
 
             // Remove old impact
-            oldWallet.setBalance(
-                    oldWallet.getBalance().add(oldAmount)
-            );
+            serviceWallet.reverseTransactionImpact(oldWallet, oldAmount);
 
             // Apply new impact
-            newWallet.setBalance(
-                    newWallet.getBalance().subtract(newAmount)
-            );
+            serviceWallet.subtractBalance(newWallet, newAmount);
 
             // Reassign wallet
             expense.setWallet(newWallet);
@@ -146,13 +174,24 @@ public class ServiceExpense {
         expense.setAmount(newAmount);
         expense.setDate(request.getDate());
         expense.setType(request.getType());
-        expense.setTaxDeductible(Boolean.TRUE.equals(request.getTaxDeductible()));
+        expense.setTaxDeductible(
+                Boolean.TRUE.equals(request.getTaxDeductible())
+        );
         expense.setRecurring(Boolean.TRUE.equals(request.getRecurring()));
         expense.setRecurrencePattern(request.getRecurrencePattern());
 
         return mapToResponse(expense);
     }
 
+    /**
+     * Deletes an expense entry for the specified user.
+     *
+     * @param expenseId the unique identifier of the expense to delete
+     * @param userId the unique identifier of the authenticated user
+     * @throws ResourceNotFoundException if the expense is not found
+     * @throws WalletAccessDeniedException if the user does not have access
+     *         to the wallet
+     */
     public void deleteExpense(
             final UUID expenseId,
             final UUID userId
@@ -160,7 +199,7 @@ public class ServiceExpense {
 
         Expense expense = repositoryExpense.findById(expenseId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Expense not found")
+                        new ResourceNotFoundException("Expense not found")
                 );
 
         // Validate access
@@ -170,23 +209,26 @@ public class ServiceExpense {
                         userId
                 )
                 .orElseThrow(() ->
-                        new AccessDeniedException(
+                        new WalletAccessDeniedException(
                                 "You do not have access to this wallet"
                         )
                 );
 
         Wallet wallet = expense.getWallet();
 
-        // Subtract expense value from wallet balance
-        wallet.setBalance(
-                wallet.getBalance().add(expense.getAmount())
-        );
+        // Reverse the expense impact on wallet balance using service method
+        serviceWallet.addBalance(wallet, expense.getAmount());
 
         repositoryExpense.delete(expense);
     }
 
     /**
-     * Maps ExpenseRequest → Expense entity
+     * Maps an ExpenseRequest DTO to an Expense entity.
+     *
+     * @param request the expense request containing expense details
+     * @param wallet the wallet to associate with the expense
+     * @param contributor the user contributing the expense
+     * @return the mapped Expense entity
      */
     private Expense mapToEntity(
             final ExpenseRequest request,
@@ -223,7 +265,10 @@ public class ServiceExpense {
     }
 
     /**
-     * Maps Expense → ExpenseResponse
+     * Maps an Expense entity to an ExpenseResponse DTO.
+     *
+     * @param expense the expense entity to map
+     * @return the mapped ExpenseResponse
      */
     private ExpenseResponse mapToResponse(final Expense expense) {
 
