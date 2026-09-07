@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
@@ -575,8 +576,8 @@ public final class GlobalExceptionHandler {
             final HttpServletRequest request
     ) {
 
-        String message = "Invalid value for parameter '%s'."
-                .formatted(ex.getName());
+        String message = "Invalid value '%s' for parameter '%s'."
+                .formatted(ex.getValue(), ex.getName());
 
         if (ex.getRequiredType() != null
                 && ex.getRequiredType().isEnum()) {
@@ -588,12 +589,11 @@ public final class GlobalExceptionHandler {
                     .collect(java.util.stream.Collectors.joining(", "));
 
             message = "Invalid value '%s' for "
-                    + "parameter '%s'. Allowed values: %s."
-                    .formatted(
-                            ex.getValue(),
-                            ex.getName(),
-                            allowedValues
-                    );
+                    + "parameter '%s'. Allowed values: %s.".formatted(
+                    ex.getValue(),
+                    ex.getName(),
+                    allowedValues
+            );
         }
 
         return ResponseEntity
@@ -894,6 +894,39 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
                         ex.getMessage(), request.getRequestURI()
+                ));
+    }
+
+    /**
+     * Handles malformed multipart requests (e.g. missing boundary,
+     * truncated body). Almost always a client-side issue — a manually
+     * set Content-Type header without a boundary, or a non-multipart
+     * body sent to a multipart endpoint — so it's logged as a warning
+     * rather than an unhandled exception.
+     *
+     * @param ex the exception
+     * @param request the current HTTP request
+     * @return a response with BAD_REQUEST status
+     */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipartException(
+            final MultipartException ex,
+            final HttpServletRequest request
+    ) {
+
+        log.warn(
+                "MALFORMED MULTIPART REQUEST at {} {} - {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(
+                        "The multipart request is malformed or missing "
+                                + "its boundary.",
+                        request.getRequestURI()
                 ));
     }
 }

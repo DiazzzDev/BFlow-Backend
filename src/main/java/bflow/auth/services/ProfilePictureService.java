@@ -94,7 +94,8 @@ public class ProfilePictureService {
             );
         }
 
-        String pictureUrl = baseUrl + "/api/v1/users/" + userId + "/picture";
+        String pictureUrl = baseUrl + "/api/v1/users/" + userId
+                + "/picture?v=" + java.time.Instant.now().toEpochMilli();
 
         user.setPictureUrl(pictureUrl);
         user.setPictureSource(PictureSource.S3);
