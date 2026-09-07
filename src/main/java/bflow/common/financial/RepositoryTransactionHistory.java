@@ -88,15 +88,29 @@ public class RepositoryTransactionHistory {
             e.user_id::text AS contributor_id, u1.name AS contributor_name,
             u1.email AS contributor_email,
             u1.picture_url AS contributor_picture_url,
-            wm1.member_count AS member_count,
+            wm1.contributor_count AS member_count,
             NULL::text AS status, e.source AS source
         FROM expenses e
         JOIN wallets w1 ON w1.id = e.wallet_id
         LEFT JOIN categories c1 ON c1.id = e.category_id
         JOIN users u1 ON u1.id = e.user_id
         JOIN (
-            SELECT wallet_id, COUNT(*) AS member_count
-            FROM wallet_users
+            SELECT wallet_id, COUNT(DISTINCT user_id) AS contributor_count
+            FROM (
+                SELECT wallet_id, user_id FROM expenses
+                WHERE wallet_id IN (:walletIds)
+                UNION
+                SELECT wallet_id, user_id FROM incomes
+                WHERE wallet_id IN (:walletIds)
+                UNION
+                SELECT from_wallet_id AS wallet_id, user_id FROM transfer
+                WHERE from_wallet_id IN (:walletIds)
+                   OR to_wallet_id IN (:walletIds)
+                UNION
+                SELECT to_wallet_id AS wallet_id, user_id FROM transfer
+                WHERE from_wallet_id IN (:walletIds)
+                   OR to_wallet_id IN (:walletIds)
+            ) all_contributors
             GROUP BY wallet_id
         ) wm1 ON wm1.wallet_id = e.wallet_id
         WHERE e.wallet_id IN (:walletIds)
@@ -129,7 +143,7 @@ public class RepositoryTransactionHistory {
         u2.name AS contributor_name,
         u2.email AS contributor_email,
         u2.picture_url AS contributor_picture_url,
-        wm2.member_count AS member_count,
+        wm2.contributor_count AS member_count,
         NULL::text AS status,
         i.source AS source
     FROM incomes i
@@ -137,8 +151,22 @@ public class RepositoryTransactionHistory {
     LEFT JOIN categories c2 ON c2.id = i.category_id
     JOIN users u2 ON u2.id = i.user_id
     JOIN (
-        SELECT wallet_id, COUNT(*) AS member_count
-        FROM wallet_users
+        SELECT wallet_id, COUNT(DISTINCT user_id) AS contributor_count
+        FROM (
+            SELECT wallet_id, user_id FROM expenses
+            WHERE wallet_id IN (:walletIds)
+            UNION
+            SELECT wallet_id, user_id FROM incomes
+            WHERE wallet_id IN (:walletIds)
+            UNION
+            SELECT from_wallet_id AS wallet_id, user_id FROM transfer
+            WHERE from_wallet_id IN (:walletIds)
+               OR to_wallet_id IN (:walletIds)
+            UNION
+            SELECT to_wallet_id AS wallet_id, user_id FROM transfer
+            WHERE from_wallet_id IN (:walletIds)
+               OR to_wallet_id IN (:walletIds)
+        ) all_contributors
         GROUP BY wallet_id
     ) wm2 ON wm2.wallet_id = i.wallet_id
     WHERE i.wallet_id IN (:walletIds)
@@ -175,7 +203,7 @@ public class RepositoryTransactionHistory {
         u3.name AS contributor_name,
         u3.email AS contributor_email,
         u3.picture_url AS contributor_picture_url,
-        wm3.member_count AS member_count,
+        wm3.contributor_count AS member_count,
         t.status::text AS status,
         NULL::text AS source
     FROM transfer t
@@ -183,8 +211,22 @@ public class RepositoryTransactionHistory {
     JOIN wallets w3t ON w3t.id = t.to_wallet_id
     JOIN users u3 ON u3.id = t.user_id
     JOIN (
-        SELECT wallet_id, COUNT(*) AS member_count
-        FROM wallet_users
+        SELECT wallet_id, COUNT(DISTINCT user_id) AS contributor_count
+        FROM (
+            SELECT wallet_id, user_id FROM expenses
+            WHERE wallet_id IN (:walletIds)
+            UNION
+            SELECT wallet_id, user_id FROM incomes
+            WHERE wallet_id IN (:walletIds)
+            UNION
+            SELECT from_wallet_id AS wallet_id, user_id FROM transfer
+            WHERE from_wallet_id IN (:walletIds)
+               OR to_wallet_id IN (:walletIds)
+            UNION
+            SELECT to_wallet_id AS wallet_id, user_id FROM transfer
+            WHERE from_wallet_id IN (:walletIds)
+               OR to_wallet_id IN (:walletIds)
+        ) all_contributors
         GROUP BY wallet_id
     ) wm3 ON wm3.wallet_id = t.from_wallet_id
     WHERE (t.from_wallet_id IN (:walletIds) OR t.to_wallet_id IN (:walletIds))
