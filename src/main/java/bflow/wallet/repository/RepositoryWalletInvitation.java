@@ -3,9 +3,12 @@ package bflow.wallet.repository;
 import bflow.wallet.entities.WalletInvitation;
 import bflow.wallet.enums.WalletInvitationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -116,5 +119,36 @@ public interface RepositoryWalletInvitation
     List<String> findInvitedEmailsByWalletIdAndStatus(
             UUID walletId,
             WalletInvitationStatus status
+    );
+
+    /**
+     * Bulk-transitions every PENDING invitation past its expiration
+     * date to EXPIRED.
+     *
+     * Invitation status otherwise only advances lazily — when
+     * someone tries to accept/reject one after the fact — so an
+     * invitation nobody ever touched stays PENDING in the database
+     * forever, even though {@link WalletInvitation#isExpired()}
+     * already considers it expired. That stale PENDING status is
+     * read literally by seat-limit checks and the
+     * duplicate-pending-invite check, so without this cleanup an
+     * invitation that expired weeks ago can still occupy a member
+     * slot and block re-inviting the same email.
+     *
+     * @param now the cutoff instant; invitations with
+     *         {@code expiresAt} before this are expired
+     * @return the number of invitations transitioned
+     */
+    @Modifying
+    @Query(
+            "UPDATE WalletInvitation wi "
+                    + "SET wi.status = :expiredStatus, wi.respondedAt = :now "
+                    + "WHERE wi.status = :pendingStatus "
+                    + "AND wi.expiresAt < :now"
+    )
+    int expireOverdueInvitations(
+            @Param("pendingStatus") WalletInvitationStatus pendingStatus,
+            @Param("expiredStatus") WalletInvitationStatus expiredStatus,
+            @Param("now") Instant now
     );
 }
