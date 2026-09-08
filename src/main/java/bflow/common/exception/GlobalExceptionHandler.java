@@ -2,6 +2,8 @@ package bflow.common.exception;
 
 import bflow.common.idempotency.exception.IdempotencyConflictException;
 import bflow.common.response.ApiResponse;
+import bflow.common.response.ErrorCode;
+import bflow.common.response.FieldErrorResponse;
 import bflow.legal.exception.LegalDocumentNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +33,7 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -39,6 +42,17 @@ import tools.jackson.databind.exc.InvalidFormatException;
 
 /**
  * Global controller advice to handle application-wide exceptions.
+ *
+ * <p>Every handler that maps to a domain concept now attaches a stable
+ * {@link ErrorCode} via the additive {@code ApiResponse.error(message,
+ * path, code)} overload — the {@code message} text is untouched, so
+ * the current frontend's {@code error.message} usage keeps working
+ * byte-for-byte. Handlers for pure HTTP/framework mechanics with no
+ * clear domain meaning (405, 406, 415, client disconnects, gateway
+ * errors, DB-inconsistency 409s) intentionally keep the two-argument
+ * {@code error(message, path)} call — inventing a code for those would
+ * be exactly the "blindly add every possible code" anti-pattern this
+ * contract is meant to avoid.</p>
  */
 @Slf4j
 @RestControllerAdvice
@@ -55,11 +69,12 @@ public final class GlobalExceptionHandler {
             final IllegalStateException ex,
             final HttpServletRequest request) {
         return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(ApiResponse.error(
-                ex.getMessage(),
-                request.getRequestURI())
-        );
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(
+                        ex.getMessage(),
+                        request.getRequestURI(),
+                        ErrorCode.CONFLICT)
+                );
     }
 
     /**
@@ -77,7 +92,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.INVALID_CREDENTIALS
                 ));
     }
 
@@ -96,7 +112,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.RESOURCE_NOT_FOUND
                 ));
     }
 
@@ -116,7 +133,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.RESOURCE_NOT_FOUND
                 ));
     }
 
@@ -137,7 +155,8 @@ public final class GlobalExceptionHandler {
                         ex.getMessage() != null
                                 ? ex.getMessage()
                                 : "Access denied",
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.FORBIDDEN
                 ));
     }
 
@@ -157,7 +176,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.WALLET_ACCESS_DENIED
                 ));
     }
 
@@ -177,12 +197,18 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.FILE_ACCESS_DENIED
                 ));
     }
 
     /**
-     * Handles bean validation errors.
+     * Handles bean validation errors. Now returns per-field detail via
+     * {@link ApiResponse#validationError} in addition to the same
+     * joined-string {@code message} the frontend already reads — the
+     * field {@code code} here is the raw Bean Validation constraint
+     * name (e.g. "NotBlank") until DTOs migrate to domain-specific
+     * message keys.
      * @param ex the exception.
      * @param request the current request.
      * @return error response with BAD_REQUEST status.
@@ -191,14 +217,28 @@ public final class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             final MethodArgumentNotValidException ex,
             final HttpServletRequest request) {
+
         String errorMsg = ex.getBindingResult().getFieldErrors()
                 .stream()
                 .map(err -> err.getField() + ": "
                         + err.getDefaultMessage())
                 .collect(Collectors.joining(", "));
+
+        List<FieldErrorResponse> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(err -> new FieldErrorResponse(
+                        err.getField(),
+                        err.getCode(),
+                        err.getDefaultMessage()
+                ))
+                .toList();
+
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(errorMsg, request.getRequestURI()));
+                .body(ApiResponse.validationError(
+                        errorMsg, request.getRequestURI(), fieldErrors
+                ));
     }
 
     /**
@@ -260,7 +300,8 @@ public final class GlobalExceptionHandler {
 
         ApiResponse<?> response = ApiResponse.error(
                 "Internal server error",
-                request.getRequestURI()
+                request.getRequestURI(),
+                ErrorCode.INTERNAL_SERVER_ERROR
         );
 
         return ResponseEntity
@@ -283,7 +324,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
                         "Endpoint not found",
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.RESOURCE_NOT_FOUND
                 ));
     }
 
@@ -320,11 +362,16 @@ public final class GlobalExceptionHandler {
             final HttpServletRequest request
     ) {
 
+        ErrorCode code = ex instanceof InvalidBudgetScopeException
+                ? ErrorCode.INVALID_BUDGET_SCOPE
+                : ErrorCode.INVALID_BUDGET_THRESHOLD;
+
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        code
                 ));
     }
 
@@ -345,7 +392,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.BUDGET_OVERLAP
                 ));
     }
 
@@ -368,7 +416,8 @@ public final class GlobalExceptionHandler {
                 .body(
                         ApiResponse.error(
                                 ex.getMessage(),
-                                request.getRequestURI()
+                                request.getRequestURI(),
+                                ErrorCode.EMAIL_DELIVERY_FAILED
                         )
                 );
     }
@@ -423,7 +472,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.RESOURCE_NOT_FOUND
                 ));
     }
 
@@ -485,7 +535,8 @@ public final class GlobalExceptionHandler {
 
         return ApiResponse.error(
                 message,
-                request.getRequestURI()
+                request.getRequestURI(),
+                ErrorCode.BAD_REQUEST
         );
     }
 
@@ -504,7 +555,8 @@ public final class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.PAYMENT_REQUIRED)
                 .body(ApiResponse.error(
-                        ex.getMessage(), request.getRequestURI()
+                        ex.getMessage(), request.getRequestURI(),
+                        ErrorCode.PLAN_LIMIT_EXCEEDED
                 ));
     }
 
@@ -559,7 +611,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(
                         ex.getMessage(),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.CONFLICT
                 ));
     }
 
@@ -600,7 +653,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(
                         message,
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.BAD_REQUEST
                 ));
     }
 
@@ -622,7 +676,8 @@ public final class GlobalExceptionHandler {
                 .body(ApiResponse.error(
                         "Missing required parameter '%s'."
                                 .formatted(ex.getParameterName()),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.BAD_REQUEST
                 ));
     }
 
@@ -644,7 +699,8 @@ public final class GlobalExceptionHandler {
                 .body(ApiResponse.error(
                         "Missing required header '%s'."
                                 .formatted(ex.getHeaderName()),
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.BAD_REQUEST
                 ));
     }
 
@@ -673,7 +729,8 @@ public final class GlobalExceptionHandler {
                         message.isBlank()
                                 ? "Request validation failed."
                                 : message,
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.VALIDATION_ERROR
                 ));
     }
 
@@ -699,7 +756,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(
                         message,
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.VALIDATION_ERROR
                 ));
     }
 
@@ -764,7 +822,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(
                         "The operation violates a database constraint.",
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.CONFLICT
                 ));
     }
 
@@ -785,7 +844,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(
                         "The resource was modified by another request.",
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.CONFLICT
                 ));
     }
 
@@ -812,7 +872,8 @@ public final class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(
                         errorMsg,
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.VALIDATION_ERROR
                 ));
     }
 
@@ -835,7 +896,8 @@ public final class GlobalExceptionHandler {
                 .body(
                         ApiResponse.error(
                                 ex.getMessage(),
-                                request.getRequestURI()
+                                request.getRequestURI(),
+                                ErrorCode.STORAGE_ERROR
                         )
                 );
     }
@@ -855,7 +917,8 @@ public final class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(
-                        ex.getMessage(), request.getRequestURI()
+                        ex.getMessage(), request.getRequestURI(),
+                        ErrorCode.IDEMPOTENCY_CONFLICT
                 ));
     }
 
@@ -874,7 +937,8 @@ public final class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(
-                        ex.getMessage(), request.getRequestURI()
+                        ex.getMessage(), request.getRequestURI(),
+                        ErrorCode.INVALID_BUDGET_DATE
                 ));
     }
 
@@ -893,7 +957,8 @@ public final class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(
-                        ex.getMessage(), request.getRequestURI()
+                        ex.getMessage(), request.getRequestURI(),
+                        ErrorCode.LEGAL_DOCUMENT_NOT_FOUND
                 ));
     }
 
@@ -926,7 +991,8 @@ public final class GlobalExceptionHandler {
                 .body(ApiResponse.error(
                         "The multipart request is malformed or missing "
                                 + "its boundary.",
-                        request.getRequestURI()
+                        request.getRequestURI(),
+                        ErrorCode.BAD_REQUEST
                 ));
     }
 }

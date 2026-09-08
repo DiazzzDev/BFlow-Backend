@@ -60,6 +60,10 @@ public class UserService {
             user.setNameSource(NameSource.USER);
         }
 
+        if (request.getLanguage() != null) {
+            user.setLanguage(request.getLanguage());
+        }
+
         userRepository.save(user);
 
         return getProfile(userId);
@@ -114,6 +118,7 @@ public class UserService {
                 .pictureUrl(user.getPictureUrl())
                 .roles(user.getRoles())
                 .status(user.getStatus())
+                .language(user.getLanguage())
                 .build();
     }
 }

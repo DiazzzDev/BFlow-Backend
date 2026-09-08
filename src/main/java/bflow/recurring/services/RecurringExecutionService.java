@@ -124,7 +124,8 @@ public class RecurringExecutionService {
                     notification.amount(),
                     notification.attempts(),
                     notification.deactivated(),
-                    notification.reason()
+                    notification.reason(),
+                    notification.language()
             );
         } catch (Exception mailError) {
             log.error("Failed to send recurring-failure email for {}: {}",

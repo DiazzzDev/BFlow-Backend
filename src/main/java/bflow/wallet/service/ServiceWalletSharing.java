@@ -327,7 +327,8 @@ public class ServiceWalletSharing {
                 invitation.getInvitedByUser().getEmail(),
                 invitation.getWallet().getName(),
                 invitation.getToken(),
-                invitation.getExpiresAt()
+                invitation.getExpiresAt(),
+                bflow.auth.enums.SupportedLanguage.ES
         );
     }
 

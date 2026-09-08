@@ -220,14 +220,15 @@ public final class NotificationService {
                     member.getId(),
                     NotificationType.BUDGET_GROUP_SUCCESS,
                     "Team budget completed!",
-                    walletName + " stayed within budget this period \uD83C\uDF89"
+                    walletName + " stayed within budget this period"
             );
 
             emailTemplateService.sendBudgetGroupSuccessEmail(
                     member.getEmail(),
                     member.getName(),
                     walletName,
-                    budget
+                    budget,
+                    member.getLanguage()
             );
         }
     }
