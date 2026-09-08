@@ -55,6 +55,10 @@
           "value": "https://www.bflow-studio.com/"
         },
         {
+          "name": "BASE_URL",
+          "value": "https://api.bflow-studio.com"
+        },
+        {
           "name": "S3_BUCKET",
           "value": "${S3_BUCKET}"
         },
