@@ -32,7 +32,8 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
+import jakarta.validation.ConstraintViolation;
+import org.springframework.validation.FieldError;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -229,7 +230,7 @@ public final class GlobalExceptionHandler {
                 .stream()
                 .map(err -> new FieldErrorResponse(
                         err.getField(),
-                        err.getCode(),
+                        extractCode(err),
                         err.getDefaultMessage()
                 ))
                 .toList();
@@ -994,5 +995,37 @@ public final class GlobalExceptionHandler {
                         request.getRequestURI(),
                         ErrorCode.BAD_REQUEST
                 ));
+    }
+
+    /**
+     * Extracts a stable, domain-level code from a field error — the
+     * {@code {key}} used in the failing annotation's {@code message}
+     * attribute (e.g. {@code "category.name.required"}), not Spring's
+     * generic constraint-annotation name (e.g. {@code "NotBlank"}).
+     * Falls back to Spring's own code when no underlying
+     * {@link ConstraintViolation} is available (e.g. a JSON binding
+     * failure rather than a business rule violation) or when the
+     * annotation used a literal message instead of a {@code {key}}.
+     *
+     * @param error the field error.
+     * @return a stable code suitable for frontend
+     *         {@code t('validation.' + code)} lookups.
+     */
+    private String extractCode(final FieldError error) {
+
+        if (error.contains(ConstraintViolation.class)) {
+
+            ConstraintViolation<?> violation =
+                    error.unwrap(ConstraintViolation.class);
+            String template = violation.getMessageTemplate();
+
+            if (template != null
+                    && template.startsWith("{")
+                    && template.endsWith("}")) {
+                return template.substring(1, template.length() - 1);
+            }
+        }
+
+        return error.getCode();
     }
 }
