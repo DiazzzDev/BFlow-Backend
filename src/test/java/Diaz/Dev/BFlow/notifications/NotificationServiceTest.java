@@ -1,6 +1,7 @@
 package Diaz.Dev.BFlow.notifications;
 
 import bflow.auth.entities.User;
+import bflow.auth.enums.SupportedLanguage;
 import bflow.auth.repository.RepositoryUser;
 import bflow.budget.DTO.BudgetResponse;
 import bflow.common.aws.service.EmailTemplateService;
@@ -102,10 +103,10 @@ class NotificationServiceTest {
         // addressed by name, not a single blast email.
         verify(emailTemplateService).sendBudgetGroupSuccessEmail(
                 eq("alice@example.com"), eq("Alice"),
-                eq("Household"), eq(response));
+                eq("Household"), eq(response), eq(SupportedLanguage.ES));
         verify(emailTemplateService).sendBudgetGroupSuccessEmail(
                 eq("bob@example.com"), eq("Bob"),
-                eq("Household"), eq(response));
+                eq("Household"), eq(response), eq(SupportedLanguage.ES));
 
         // This flow must go through the templated path, never the
         // legacy plain-text sendEmail used by the personal flow.
@@ -121,6 +122,6 @@ class NotificationServiceTest {
 
         verify(notificationRepository, never()).save(any());
         verify(emailTemplateService, never())
-                .sendBudgetGroupSuccessEmail(any(), any(), any(), any());
+                .sendBudgetGroupSuccessEmail(any(), any(), any(), any(), any());
     }
 }
